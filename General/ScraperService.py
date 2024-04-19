@@ -1,0 +1,45 @@
+'''
+ScraperService class to interact from frontend with backend scrapers.
+'''
+
+#Imports
+from Platforms import _Platforms
+
+import asyncio
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
+class ScraperService():
+    def __init__(self) -> None:
+        pass
+        
+    '''
+    Fields:
+    keywords = list of str
+    frequency = use AsyncIOScheduler for this. Idk how it works yet 
+    platform = enum _Platforms for platform to scrape
+    '''
+
+    keywords = [str]
+    frequency = int
+    platforms = _Platforms
+
+    '''
+    Methods:
+    set_frequency = takes frequency from frontend and applies it to scrapers. Takes an int as argument
+    set_platform = sets the platform(s) to scrape from. Takes members of Enum platforms as argument
+    set_keywords = sets the keyword(s) to look for. Takes list of str as argument
+    '''
+    def set_frequency(frequency):
+        raise NotImplementedError("'set_frequency' is yet to be implemented")
+
+    def set_platform(platform):
+        raise NotImplementedError("'set_platform' is yet to be implemented")
+
+    def set_keywords(keywords):
+        raise NotImplementedError("'set_keywords' is yet to be implemented")
+
+    def start_scraping():
+        raise NotImplementedError("'start_scraping' is yet to be implemented")
+    
+    def stop_scraping():
+        raise NotImplementedError("'stop_scraping' is yet to be implemented")
