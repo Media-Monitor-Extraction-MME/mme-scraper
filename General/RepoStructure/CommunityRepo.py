@@ -3,7 +3,7 @@ Implementation of  ICommunityRepository interface
 '''
 
 #Imports
-import ICommunityRepository
+from ICommunityRepo import ICommunityRepository
 
 class CommunityRepo(ICommunityRepository):
 

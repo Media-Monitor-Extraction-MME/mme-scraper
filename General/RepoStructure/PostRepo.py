@@ -3,7 +3,7 @@ Implementation of IPostRepository interface
 '''
 
 #Imports
-import IPostRepository
+from IPostRepo import IPostRepository
 
 class PostRepo(IPostRepository):
 
