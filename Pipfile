@@ -7,6 +7,9 @@ name = "pypi"
 apscheduler = "*"
 asyncio = "*"
 playwright = "*"
+http-request-randomizer = "*"
+motor = "*"
+python-dotenv = "*"
 
 [dev-packages]
 
