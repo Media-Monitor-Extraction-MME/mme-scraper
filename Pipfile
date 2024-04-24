@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 apscheduler = "*"
 asyncio = "*"
+playwright = "*"
 
 [dev-packages]
 
