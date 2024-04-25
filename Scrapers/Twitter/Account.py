@@ -67,21 +67,21 @@ class Account:
             page = await context.new_page()
             await page.goto("https://twitter.com/i/flow/signup")  
 
-            time.sleep(1)
+            asyncio.sleep(1)
 
             await page.click('div.css-175oi2r:nth-child(5)')
 
             username_selector = 'div.r-1f1sjgu:nth-child(1) > label:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > input:nth-child(1)'
             email_selector = 'div.r-1f1sjgu:nth-child(2) > label:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > input:nth-child(1)'
 
-            time.sleep(0.5)
+            asyncio.sleep(0.5)
 
             await page.type(username_selector, self.username, delay=150)
             await page.evaluate(f'''() => {{
             const element = document.querySelector("{username_selector}");
             if (element) element.blur();
             }}''')
-            time.sleep(0.5)
+            asyncio.sleep(0.5)
             await page.type(email_selector, self.email, delay=150)
             await page.evaluate(f'''() => {{
             const element = document.querySelector("{username_selector}");
@@ -92,22 +92,22 @@ class Account:
             day_selector = '#SELECTOR_2'
             year_selector = '#SELECTOR_3'
 
-            time.sleep(0.5)
+            asyncio.sleep(0.5)
             await page.click(month_selector)
-            time.sleep(0.8)
+            asyncio.sleep(0.8)
             await page.select_option(month_selector, value = birth_month)
-            time.sleep(0.5)
+            asyncio.sleep(0.5)
             await page.click(day_selector)
-            time.sleep(0.8)
+            asyncio.sleep(0.8)
             await page.select_option(day_selector, value = birth_day)
-            time.sleep(0.5)
+            asyncio.sleep(0.5)
             await page.click(year_selector)
-            time.sleep(0.8)
+            asyncio.sleep(0.8)
             await page.select_option(year_selector, value = birth_year)
-            time.sleep(0.8)
+            asyncio.sleep(0.8)
             await page.click(year_selector)
 
-            time.sleep(2)
+            asyncio.sleep(2)
 
             selector_string = '[data-testid="ocfSignupNextLink"]'
             element_handle = await page.query_selector(selector_string)
@@ -117,7 +117,7 @@ class Account:
             else:
                 print("Element not found")
 
-            time.sleep(2)
+            asyncio.sleep(2)
 
             second_selector_string = '[data-testid="ocfSettingsListNextButton"]'
             second_element_handle = await page.query_selector(second_selector_string)
@@ -128,7 +128,7 @@ class Account:
             else:
                 print("Element not found")
         
-            time.sleep(120)
+            asyncio.sleep(120)
 
             pages = context.pages
 
@@ -171,7 +171,7 @@ class Account:
                 except Exception as e:
                     print(f"Error clicking the button: {e}")
 
-                time.sleep(0.8)
+                asyncio.sleep(0.8)
 
                 password_selector = 'input[name="password"]'
                 await page.type(password_selector, password, delay=150)
@@ -180,34 +180,34 @@ class Account:
                 await page.click(password_button)
 
                 #Here the Arkose comes in
-                time.sleep(10)
+                asyncio.sleep(10)
                 locked_account_button = 'input[type="submit"][value="Start"]'
                 locked_account_button_check = await page.query_selector(locked_account_button)
 
                 if locked_account_button_check:
                     await page.click(locked_account_button)
 
-                    time.sleep(1)
+                    asyncio.sleep(1)
 
                     continue_button = 'input[type="submit"][value="Continue to X"]'
                     await page.click(continue_button)
 
-                    time.sleep(5)
+                    asyncio.sleep(5)
                     ok_button = '[data-testid="confirmationSheetConfirm"]'
                     await page.click(ok_button)
 
                 else:
                     skip_pfp = '[data-testid="ocfSelectAvatarSkipForNowButton"]'
                     await page.click(skip_pfp)
-                    time.sleep(1)
+                    asyncio.sleep(1)
 
                     skip_username = '[data-testid="ocfEnterUsernameSkipButton"]'
                     await page.click(skip_username)
-                    time.sleep(1)
+                    asyncio.sleep(1)
 
                     no_notifs = '#layers > div:nth-child(2) > div > div > div > div > div > div.css-175oi2r.r-1ny4l3l.r-18u37iz.r-1pi2tsx.r-1777fci.r-1xcajam.r-ipm5af.r-g6jmlv.r-1awozwy > div.css-175oi2r.r-1wbh5a2.r-htvplk.r-1udh08x.r-1867qdf.r-kwpbio.r-rsyp9y.r-1pjcn9w.r-1279nm1 > div > div > div.css-175oi2r.r-1ny4l3l.r-6koalj.r-16y2uox.r-kemksi.r-1wbh5a2 > div.css-175oi2r.r-16y2uox.r-1wbh5a2.r-1jgb5lz.r-13qz1uu.r-1ye8kvj > div > div > div > div > div > div.css-175oi2r.r-98ikmy.r-hvns9x > div.css-175oi2r.r-13qz1uu > div.css-175oi2r.r-sdzlij.r-1phboty.r-rs99b7.r-lrvibr.r-1wzrnnt.r-19yznuf.r-64el8z.r-1dye5f7.r-1loqt21.r-o7ynqc.r-6416eg.r-1ny4l3l'
                     await page.click(no_notifs)
-                    time.sleep(1)
+                    asyncio.sleep(1)
 
                     interest_music_selector = '#verticalGridItem-0-categoryrecommendations-1772591907453534208 > div > div > div > div'
                     interest_entertainment_selector = '#verticalGridItem-1-categoryrecommendations-1772591907453534208 > div > div > div > div'
