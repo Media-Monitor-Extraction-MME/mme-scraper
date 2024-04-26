@@ -37,10 +37,6 @@ class ScraperService():
 
     def set_keywords(keywords):
         raise NotImplementedError("'set_keywords' is yet to be implemented")
-    
-    #Job for logic for scraping, so we can add it to scheduler
-    def scraping_logic():
-        ...
 
     def start_scraping():
         #raise NotImplementedError("'start_scraping' is yet to be implemented")
@@ -54,4 +50,4 @@ class ScraperService():
         #raise NotImplementedError("'stop_scraping' is yet to be implemented")
         scheduler.s
         blabla = AsyncIOScheduler()
-        blabla.
+        blabla
