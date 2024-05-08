@@ -6,7 +6,6 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import certifi
 import os
 
-# Load environment variables
 load_dotenv()
 MONGODB_URI = os.getenv('MONGODB_URI')
 ca_path = certifi.where()
@@ -16,7 +15,6 @@ class DBManager(IDBManager):
     db = None
 
     def __init__(self, uri=MONGODB_URI, db_name='testdb'):
-        # Create the AsyncIOMotorClient with the tlsCAFile parameter
         self.client = AsyncIOMotorClient(uri, tlsCAFile=ca_path)
         self.db = self.client[db_name]
 
