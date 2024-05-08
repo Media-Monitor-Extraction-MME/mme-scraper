@@ -39,7 +39,15 @@ class ScraperService():
         raise NotImplementedError("'set_keywords' is yet to be implemented")
 
     def start_scraping():
-        raise NotImplementedError("'start_scraping' is yet to be implemented")
+        #raise NotImplementedError("'start_scraping' is yet to be implemented")
+        scheduler = AsyncIOScheduler()
+        scheduler.add_job(ScraperService.scraping_logic, 'interval', seconds=3)
+        scheduler.start()
+
+        return scheduler
     
-    def stop_scraping():
-        raise NotImplementedError("'stop_scraping' is yet to be implemented")
+    def stop_scraping(scheduler):
+        #raise NotImplementedError("'stop_scraping' is yet to be implemented")
+        scheduler.s
+        blabla = AsyncIOScheduler()
+        blabla
