@@ -1,5 +1,4 @@
 # Imports
-from typing import Dict, List, Any
 from InterfaceDBManager import IDBManager
 from dotenv import load_dotenv
 from motor.motor_asyncio import AsyncIOMotorClient

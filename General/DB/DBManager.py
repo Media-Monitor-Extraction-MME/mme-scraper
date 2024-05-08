@@ -2,12 +2,12 @@
 MongoDB DB Implementation
 '''
 
-#Imports
-from InterfaceDBManager import *
+# Imports
+from InterfaceDBManager import IDBManager
 from dotenv import load_dotenv
 from motor.motor_asyncio import AsyncIOMotorClient
-import os
 import certifi
+import os
 
 load_dotenv()
 MONGODB_URI = os.getenv('MONGODB_URI')
@@ -18,20 +18,48 @@ class DBManager(IDBManager):
     db = None
 
     def __init__(self, uri=MONGODB_URI, db_name='testdb'):
-        self.client = AsyncIOMotorClient(uri, tlsCAFile=ca_path) #tlsCAFile used because i couldn't connect otherwise
+        self.client = AsyncIOMotorClient(uri, tlsCAFile=ca_path)
         self.db = self.client[db_name]
 
     async def update_documents(self, collection: str, filter: Dict[str, Any], document: Dict[str, Any]) -> int:
-        return super().update_documents(collection, filter, document)
-    
-    async def delete_documents(self, collection: str, filter: Dict[str, os.Any]) -> int:
-        return super().delete_documents(collection, filter)
-    
-    async def get_document(self, collection: str, filter: Dict[str, os.Any], returnID: bool = False) -> Dict[str, os.Any]:
-        return super().get_document(collection, filter, returnID)
-    
-    async def get_document_ids(self, collection: str, filter: Dict[str, os.Any]) -> List[Any]:
-        return super().get_document_ids(collection, filter)
-    
-    async def insert_documents(self, collection: str, newdoc: List[Dict[str, os.Any]]) -> List[os.Any]:
-        return super().insert_documents(collection, newdoc)
+        """
+        Update documents based on a filter.
+        
+        Returns the number of documents updated.
+        """
+        result = await self.db[collection].update_many(filter, document)
+        return result.modified_count
+
+    async def delete_documents(self, collection: str, filter: Dict[str, Any]) -> int:
+        """
+        Delete documents based on a filter.
+
+        Returns the number of documents deleted.
+        """
+        result = await self.db[collection].delete_many(filter)
+        return result.deleted_count
+
+    async def get_document(self, collection: str, filter: Dict[str, Any], returnID: bool = False) -> Dict[str, Any]:
+        """
+        Retrieve a single document based on a filter.
+        
+        Optionally includes the document's ID.
+        """
+        document = await self.db[collection].find_one(filter)
+        if document and not returnID:
+            document.pop("_id", None)
+        return document
+
+    async def get_document_ids(self, collection: str, filter: Dict[str, Any]) -> List[Any]:
+        """
+        Retrieve IDs of documents based on a filter.
+        """
+        cursor = self.db[collection].find(filter, {"_id": 1})
+        return [doc["_id"] for doc in await cursor.to_list(length=100)]
+
+    async def insert_documents(self, collection: str, newdoc: List[Dict[str, Any]]) -> List[Any]:
+        """
+        Insert new documents and return their IDs.
+        """
+        result = await self.db[collection].insert_many(newdoc)
+        return result.inserted_ids
