@@ -4,7 +4,9 @@ ScraperService class to interact from frontend with backend scrapers.
 
 #Imports
 from Platforms import _Platforms
-
+from General.DB.DataBaseManager import *
+from Scrapers.Twitter import *
+from playwright.async_api import async_playwright
 import asyncio
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
