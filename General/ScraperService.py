@@ -5,7 +5,7 @@ ScraperService class to interact from frontend with backend scrapers.
 #Imports
 from Platforms import _Platforms
 from General.DB.DataBaseManager import *
-from Scrapers.Twitter import *
+from Scrapers.Twitter.TwitterScraperClass import *
 from playwright.async_api import async_playwright
 import asyncio
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -20,7 +20,7 @@ class ScraperService():
     frequency = use AsyncIOScheduler for this. Idk how it works yet 
     platform = enum _Platforms for platform to scrape
     '''
-
+    scraper = None
     keywords = [str]
     frequency = int
     platforms = _Platforms
@@ -34,8 +34,15 @@ class ScraperService():
     def set_frequency(frequency):
         raise NotImplementedError("'set_frequency' is yet to be implemented")
 
-    def set_platform(platform):
-        raise NotImplementedError("'set_platform' is yet to be implemented")
+    def set_platform(self, platform):
+        self.platform = platform
+        if platform == _Platforms.X:
+            self.scraper = TwitterScraper()
+        if platform == _Platforms.Reddit:
+            self.scraper = ...
+        else:
+            raise NotImplementedError("The given platform has not yet been implemented")
+
 
     def set_keywords(keywords):
         raise NotImplementedError("'set_keywords' is yet to be implemented")
