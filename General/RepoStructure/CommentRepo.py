@@ -3,7 +3,7 @@ Implementation of ICommentRepository interface
 '''
 
 #Imports
-from ICommentRepo import ICommentRepository
+from .ICommentRepo import ICommentRepository
 
 class CommentRepo(ICommentRepository):
     

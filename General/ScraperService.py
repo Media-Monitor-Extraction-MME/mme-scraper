@@ -3,7 +3,7 @@ ScraperService class to interact from frontend with backend scrapers.
 '''
 
 #Imports
-from Platforms import _Platforms
+from .Platforms import _Platforms
 from General.DB.DataBaseManager import *
 from Scrapers.Twitter.TwitterScraperClass import *
 from Scrapers.Reddit.RedditScraperClass import *
