@@ -18,7 +18,7 @@ class Tweet:
 
     def to_doc(self):
         return {
-            "_id": self._id,
+            "ObjectId": self._id,
             "link": self.link,
             "content": self.content,
             "date": self.date,

@@ -1,3 +1,0 @@
-'''
-MongoDB DB Implementation
-'''

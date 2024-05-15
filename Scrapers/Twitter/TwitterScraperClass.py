@@ -296,9 +296,8 @@ class TwitterScraper:
 						num = 1000
 						hex_string = f'{num:024x}'
 						objectId = ObjectId(hex_string)
-						objectIdString = f'tw{objectId}'
 
-						tweet = Tweet(_id=objectIdString,
+						tweet = Tweet(_id=objectId,
 										link=link, 
 										content=tweet_content_with_emoji, 
 										date=tweet_date, likes=tweet_likes, 

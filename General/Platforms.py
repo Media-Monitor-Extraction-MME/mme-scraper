@@ -1,10 +1,10 @@
 '''
 This is the file containing Enum Platforms
 '''
-from enum import Enum
+from enum import Enum, auto
 
 class _Platforms(Enum):
-    X = 1
-    Reddit = 2
+    X = auto()
+    Reddit = auto()
 
 
