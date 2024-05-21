@@ -152,7 +152,7 @@ class RedditScraper:
             
             return post
 
-    async def content_scrape(self, posts) -> dict:
+    async def content_scrape(self, posts, browser) -> dict:
         """
         Scrapes the content of a Reddit post, specifically the comments.
         
@@ -163,36 +163,40 @@ class RedditScraper:
         Returns:
             A dictionary containing the title, upvotes, description, and comments of the Reddit post.
         """
-        url = f"https://old.reddit.com/{post['perma_link']}"
-        try:
-            await page.goto(url, wait_until='domcontentloaded')
-            asyncio.sleep(0.3)
-        except Exception as e:
-            print(f"Error: {e}")
-            return {}
-        
-        # this description shit clearly doesn't belong here
-        description_selector = '#siteTable div div > div.expando div.md'            #'[slot="text-body"] p'
-        description_element = await page.query_selector(description_selector)
-        description = { "description" :  await description_element.inner_text() if description_element else ""}
-        
-        # absolute abomination of JS eval
-        comments_data = await page.evaluate("""
-                    (function fetchComments() {
-                        function getCommentData(commentElement) {
-                            var comment = commentElement.querySelector(".usertext")?.innerText;
-                            var score = commentElement.querySelector(".score")?.innerText;
-                            var fullname = commentElement.getAttribute("data-fullname");
-                            var children = Array.from(commentElement.querySelectorAll(":scope > .child > .listing > .comment"))
-                                .map(getCommentData);
-                            return {comment, score, fullname, children};
-                        }
+        context = await browser.new_context()
 
-                        var rootComments = document.querySelectorAll("div.commentarea > .sitetable > .comment");
-                        return Array.from(rootComments).map(getCommentData);
-                    })()
-                """)
-        comments_data = await process_comments(comments_data, post['post_id'])
+        for post in posts:
+            page = await context.new_page()
+            url = f"https://old.reddit.com/{post['perma_link']}"
+            try:
+                await page.goto(url, wait_until='domcontentloaded')
+                asyncio.sleep(0.3)
+            except Exception as e:
+                print(f"Error: {e}")
+                return {}
+            
+            # this description shit clearly doesn't belong here
+            description_selector = '#siteTable div div > div.expando div.md'            #'[slot="text-body"] p'
+            description_element = await page.query_selector(description_selector)
+            description = { "description" :  await description_element.inner_text() if description_element else ""}
+            
+            # absolute abomination of JS eval
+            comments_data = await page.evaluate("""
+                        (function fetchComments() {
+                            function getCommentData(commentElement) {
+                                var comment = commentElement.querySelector(".usertext")?.innerText;
+                                var score = commentElement.querySelector(".score")?.innerText;
+                                var fullname = commentElement.getAttribute("data-fullname");
+                                var children = Array.from(commentElement.querySelectorAll(":scope > .child > .listing > .comment"))
+                                    .map(getCommentData);
+                                return {comment, score, fullname, children};
+                            }
+
+                            var rootComments = document.querySelectorAll("div.commentarea > .sitetable > .comment");
+                            return Array.from(rootComments).map(getCommentData);
+                        })()
+                    """)
+            comments_data = await process_comments(comments_data, post['post_id'])
         
         #return comments_data
 
