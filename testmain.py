@@ -38,21 +38,31 @@ async def main():
 
     twitterscraper = TwitterScraper(link_gather_account_username=username, link_gather_account_password=password)
     redditscraper = RedditScraper
-    manager = DBManager(db_name='tests')
+    manager = DBManager(db_name='scraped_data')
 
     if twitterscraper:
         async with async_playwright() as p:
             browser = await p.chromium.launch(args=['--start-maximized'], headless=False)
 
-            keyword = 'Mbappe'
+            keyword = 'EuroVision'
 
             page = await twitterscraper.login_account(browser)
             if page is None:
                 logging.error("Page is none")
             links = await twitterscraper.link_gatherer(page, keyword)
-            data = await twitterscraper.scraper(browser, links)
+            twitterdata = await twitterscraper.scraper(browser, links)
 
-            await manager.insert_documents("testsamplesTwitter", data)
+            await manager.insert_documents("tweets", twitterdata)
+
+    if redditscraper:
+        raise NotImplementedError("RedditScraper is not implemented yet")
+
+        '''
+        async with async_playwright() as p:
+            
+            redditdata = ...
+            await manager.insert_documents("redditposts", redditdata)
+        '''
 
 asyncio.run(main())
 
