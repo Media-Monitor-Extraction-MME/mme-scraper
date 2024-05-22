@@ -3,9 +3,10 @@ Reddit scraper implementation
 '''
 
 #Imports
-from .ForumEntity import Forum
-from .PostEntity import Post
-from .CommentEntity import Comment
+#from .ForumEntity import Forum
+from ForumEntity import Forum
+from PostEntity import Post
+from CommentEntity import Comment
 
 from playwright.async_api import async_playwright
 from bson import ObjectId
@@ -18,13 +19,12 @@ import datetime
 class RedditScraper:
     
     #Fields
-    query = str
+    #query = str
     keywords = [str]
     keyword = str
 
-    def __init__(self, query, selector):
+    def __init__(self, query):
         self.query = query
-        self.selector = selector
 
     #Methods
     async def subreddit_scrape(self, browser) -> list:
@@ -38,8 +38,11 @@ class RedditScraper:
         Returns:
             (list): A list of subreddits related to the query (with more than 2000 subscribers)
         """
-        query = self.keyword.replace(" ", "+")
-        page = await browser.new_page() 
+        query = self.query.replace(" ", "+")
+        
+        context = await browser.new_context(no_viewport=True)
+        page = await context.new_page() 
+
         await page.goto("https://old.reddit.com/search/?q="+query+"&type=sr")# go to the reddit search page
         await page.wait_for_load_state('load') 
         
@@ -76,7 +79,7 @@ class RedditScraper:
                 if subscribers > subscriber_count_limit:
                     filtered_subreddits.append(link)
 
-        await browser.close()
+        await context.close()
         
         return filtered_subreddits
 
@@ -91,40 +94,6 @@ class RedditScraper:
         Returns:
             A list of dictionaries containing post data(id,title,source,upvotes,desc,url,time) in the subreddit.
         """
-        posts = []
-        context = await browser.new_context()
-
-        for subreddit in forums:
-            page = await context.new_page()
-            await page.goto("https://old.reddit.com/"+subreddit, wait_until='domcontentloaded')
-            await page.wait_for_load_state('load')
-
-            id_selector = 'div[data-fullname]'
-            elements = await page.query_selector_all(id_selector)
-            tasks = [process_element(page, element) for element in elements]
-            posts = await asyncio.gather(*tasks)
-
-            return posts
-        async def process_element(page, element):
-            post = {
-                'post_id':None,
-                'origin': 'Reddit',
-                'subreddit': None,
-                'title': '',
-                'upvotes': None,
-                'description': '',
-                'new_url': None,
-                'perma_link': None,
-                'timestamp': None,
-            }
-            attributes = await element.evaluate('el => { return Array.from(el.attributes).map(attr => ({name: attr.name, value: attr.value})); }')
-            mapped_post = await map_post(post, attributes)
-            if mapped_post is not None:
-                post.update(mapped_post)
-                data_fullname = next(attr['value'] for attr in attributes if attr['name'] == 'data-fullname')
-                post['title'] = await (await page.query_selector(f"div[data-fullname='{data_fullname}'] > div.entry.unvoted > div.top-matter > p.title > a" )).inner_text()
-                return post
-
         async def map_post(post, attributes):
             mapping = {
                 'data-fullname': 'post_id',
@@ -147,10 +116,45 @@ class RedditScraper:
             
             if post['timestamp']:
                 timestamp_seconds = int(post['timestamp']) / 1000
-                dt = datetime.fromtimestamp(timestamp_seconds)
+                dt = datetime.date.fromtimestamp(timestamp_seconds)
                 post['timestamp'] = dt
             
             return post
+        
+        async def process_element(page, element):
+            post = {
+                'post_id':None,
+                'origin': 'Reddit',
+                'subreddit': None,
+                'title': '',
+                'upvotes': None,
+                'description': '',
+                'new_url': None,
+                'perma_link': None,
+                'timestamp': None,
+            }
+            attributes = await element.evaluate('el => { return Array.from(el.attributes).map(attr => ({name: attr.name, value: attr.value})); }')
+            mapped_post = await map_post(post, attributes)
+            if mapped_post is not None:
+                post.update(mapped_post)
+                data_fullname = next(attr['value'] for attr in attributes if attr['name'] == 'data-fullname')
+                post['title'] = await (await page.query_selector(f"div[data-fullname='{data_fullname}'] > div.entry.unvoted > div.top-matter > p.title > a" )).inner_text()
+                return post
+        posts = []
+        context = await browser.new_context()
+
+        for subreddit in forums:
+            page = await context.new_page()
+            await page.goto("https://old.reddit.com/"+subreddit, wait_until='domcontentloaded')
+            await page.wait_for_load_state('load')
+
+            id_selector = 'div[data-fullname]'
+            elements = await page.query_selector_all(id_selector)
+            tasks = [process_element(page, element) for element in elements]
+            posts = await asyncio.gather(*tasks)
+
+            return posts
+        
 
     async def content_scrape(self, posts, browser) -> dict:
         """
@@ -163,6 +167,25 @@ class RedditScraper:
         Returns:
             A dictionary containing the title, upvotes, description, and comments of the Reddit post.
         """
+        async def process_comments(comments, post_id, level=0):
+            # Recursively process comments and generate unique IDs for each comment
+            processed_comments = []
+            for comment in comments:
+                #comment_id = await generate_id(comment['fullname'])
+                processed_comment = {
+                    #'_id': comment_id,
+                    'postID': post_id,
+                    #'parentId': parent_id,
+                    'comment': comment['comment'],
+                    'score':  int(comment['score'].split()[0]) if comment['score'] else 0, # the score we get is a string with the score and the word 'points'
+                    'level' : level,
+                    'children':[]
+                }
+                if 'children' in comment and comment['children']:
+                    processed_comment['children'] = await process_comments(comment['children'], post_id, level + 1)
+                processed_comments.append(processed_comment)
+            return processed_comments
+        
         context = await browser.new_context()
 
         for post in posts:
@@ -197,26 +220,26 @@ class RedditScraper:
                         })()
                     """)
             comments_data = await process_comments(comments_data, post['post_id'])
-        
-        #return comments_data
-
-        async def process_comments(comments, post_id, level=0):
-            # Recursively process comments and generate unique IDs for each comment
-            processed_comments = []
-            for comment in comments:
-                #comment_id = await generate_id(comment['fullname'])
-                processed_comment = {
-                    #'_id': comment_id,
-                    'postID': post_id,
-                    #'parentId': parent_id,
-                    'comment': comment['comment'],
-                    'score':  int(comment['score'].split()[0]) if comment['score'] else 0, # the score we get is a string with the score and the word 'points'
-                    'level' : level,
-                    'children':[]
-                }
-                if 'children' in comment and comment['children']:
-                    processed_comment['children'] = await process_comments(comment['children'], post_id, level + 1)
-                processed_comments.append(processed_comment)
-            return processed_comments
-        
+                
         return comments_data
+    
+
+async def main():
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(args=['--start-maximized'], headless=False)
+        scraper = RedditScraper(query="Justin Bieber")
+
+        subreddits = await scraper.subreddit_scrape(browser)
+        print("Subreddits:", subreddits)
+
+        posts = await scraper.post_scrape(forums=subreddits, browser=browser)
+        print("Posts:", posts)
+
+        if posts:
+            comments = await scraper.content_scrape(posts=posts, browser=browser)
+            print("Comments:", comments)
+
+        await browser.close()
+
+if __name__ == "__main__":
+    asyncio.run(main())
