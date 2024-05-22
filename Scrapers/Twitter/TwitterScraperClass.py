@@ -5,14 +5,16 @@ Twitter scraper implementation
 #Imports
 from .AccountClass import *
 from .TweetEntity import *
+from InterfaceScraper import IScraper
 from playwright.async_api import async_playwright
+
 import asyncio
 import re
 from bson import ObjectId
 import logging
 
 
-class TwitterScraper:
+class TwitterScraper(IScraper):
 	def __init__(self, link_gather_account_username, link_gather_account_password):
 		self.link_gather_account_username = link_gather_account_username
 		self.link_gather_account_password = link_gather_account_password

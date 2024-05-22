@@ -4,19 +4,20 @@ Reddit scraper implementation
 
 #Imports
 #from .ForumEntity import Forum
-from ForumEntity import Forum
-from PostEntity import Post
-from CommentEntity import Comment
+#from ForumEntity import Forum
+#from PostEntity import Post
+#from CommentEntity import Comment
 
 from playwright.async_api import async_playwright
 from bson import ObjectId
 from binascii import hexlify, unhexlify
+from InterfaceScraper import IScraper
 
 import re
 import asyncio
 import datetime
 
-class RedditScraper:
+class RedditScraper(IScraper):
     
     #Fields
     #query = str

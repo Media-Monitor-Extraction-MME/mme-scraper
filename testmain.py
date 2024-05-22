@@ -25,6 +25,7 @@ import asyncio
 async def main():
     username = None
     password = None
+    keyword = "Toni Kroos"
 
     try:
         with open('Scrapers/Twitter/account_data/accounts.txt', 'r') as file:
@@ -37,14 +38,14 @@ async def main():
         logging.error(f"File not found: {fe}")    
 
     twitterscraper = TwitterScraper(link_gather_account_username=username, link_gather_account_password=password)
-    redditscraper = RedditScraper
+    redditscraper = RedditScraper(query=keyword)
     manager = DBManager(db_name='scraped_data')
 
     if twitterscraper:
         async with async_playwright() as p:
             browser = await p.chromium.launch(args=['--start-maximized'], headless=False)
 
-            keyword = 'EuroVision'
+            #keyword = 'EuroVision'
 
             page = await twitterscraper.login_account(browser)
             if page is None:
@@ -55,14 +56,17 @@ async def main():
             await manager.insert_documents("tweets", twitterdata)
 
     if redditscraper:
-        raise NotImplementedError("RedditScraper is not implemented yet")
-
-        '''
         async with async_playwright() as p:
+            browser = await p.chromium.launch(args=['--start-maximized'], headless=False)
+
+            subreddits = await redditscraper.subreddit_scrape(browser)
+
+            posts = await redditscraper.post_scrape(forums=subreddits, browser=browser)
+
+            if posts:
+                comments = await redditscraper.content_scrape(posts=posts, browser=browser)
             
-            redditdata = ...
-            await manager.insert_documents("redditposts", redditdata)
-        '''
+            await manager.insert_documents("redditposts", comments)
 
 asyncio.run(main())
 
