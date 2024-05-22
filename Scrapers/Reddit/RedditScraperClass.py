@@ -167,6 +167,8 @@ class RedditScraper:
         Returns:
             A dictionary containing the title, upvotes, description, and comments of the Reddit post.
         """
+        comments_data = []
+
         async def process_comments(comments, post_id, level=0):
             # Recursively process comments and generate unique IDs for each comment
             processed_comments = []
@@ -193,7 +195,7 @@ class RedditScraper:
             url = f"https://old.reddit.com/{post['perma_link']}"
             try:
                 await page.goto(url, wait_until='domcontentloaded')
-                asyncio.sleep(0.3)
+                #await asyncio.sleep(0.3)
             except Exception as e:
                 print(f"Error: {e}")
                 return {}
@@ -204,7 +206,7 @@ class RedditScraper:
             description = { "description" :  await description_element.inner_text() if description_element else ""}
             
             # absolute abomination of JS eval
-            comments_data = await page.evaluate("""
+            comment_data = await page.evaluate("""
                         (function fetchComments() {
                             function getCommentData(commentElement) {
                                 var comment = commentElement.querySelector(".usertext")?.innerText;
@@ -219,7 +221,8 @@ class RedditScraper:
                             return Array.from(rootComments).map(getCommentData);
                         })()
                     """)
-            comments_data = await process_comments(comments_data, post['post_id'])
+            comment_data = await process_comments(comment_data, post['post_id'])
+            comments_data.append(comment_data)
                 
         return comments_data
     
