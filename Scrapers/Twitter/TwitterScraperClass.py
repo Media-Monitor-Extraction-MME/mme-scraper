@@ -298,14 +298,15 @@ class TwitterScraper(IScraper):
 
 						tweet_comments = ''
 
-						num = 1000
+						num = random.randint(0, 1000000)
 						hex_string = f'{num:024x}'
 						objectId = ObjectId(hex_string)
 
 						tweet = Tweet(_id=objectId,
 										link=link, 
 										content=tweet_content_with_emoji, 
-										date=tweet_date, likes=tweet_likes, 
+										date=tweet_date, 
+										likes=tweet_likes, 
 										reposts=tweet_reposts, 
 										quotes=tweet_quotes, 
 										bookmarks=tweet_bookmarks, 
