@@ -6,7 +6,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 #Imports
 from .AccountClass import *
 from .TweetEntity import *
-#from InterfaceScraper import IScraper
+from InterfaceScraper import IScraper
 from playwright.async_api import async_playwright
 
 import asyncio
@@ -15,7 +15,7 @@ from bson import ObjectId
 import logging
 
 
-class TwitterScraper:
+class TwitterScraper(IScraper):
 	def __init__(self, link_gather_account_username, link_gather_account_password, keyword):
 		self.link_gather_account_username = link_gather_account_username
 		self.link_gather_account_password = link_gather_account_password
@@ -323,5 +323,8 @@ class TwitterScraper:
 			await context.close()
 
 		return results
+	
+	async def scrape(self, frequency, keywords):
+		...
 
 

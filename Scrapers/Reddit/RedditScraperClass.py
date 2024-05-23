@@ -224,6 +224,9 @@ class RedditScraper(IScraper):
                 
         return comments_data
     
+    async def scrape(self, frequency, keywords):
+        ...
+    
 
 async def main():
     async with async_playwright() as p:
