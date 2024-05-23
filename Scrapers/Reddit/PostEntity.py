@@ -4,7 +4,7 @@ Posts need to be morphed into this structure to enforce correct data storage
 '''
 
 class Post:
-    def __init__(self, _id, subreddit, title, score, link):
+    def __init__(self, _id: str, subreddit: str, title: str, score: str, link: str):
         self._id = _id
         self.subreddit = subreddit
         self.title = title

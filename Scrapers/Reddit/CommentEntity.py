@@ -4,7 +4,7 @@ Comments need to be morphed into this structure to enforce correct data storage
 '''
 
 class Comment:
-    def __init__(self, _id, postID, parentID, score, comment):
+    def __init__(self, _id: str, postID: str, parentID: str, score: str, comment: str):
         self._id = _id
         self.postID = postID
         self.parentID = parentID
