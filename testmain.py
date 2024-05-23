@@ -21,9 +21,12 @@ import unittest
 
 import logging
 import asyncio
+import time
 
 async def run_reddit(redditscraper, manager):
     async with async_playwright() as p:
+        start_time = time.time()
+
         browser = await p.chromium.launch(args=['--start-maximized'], headless=False)
 
         subreddits = await redditscraper.subreddit_scrape(browser)
@@ -35,11 +38,16 @@ async def run_reddit(redditscraper, manager):
             
         await manager.insert_documents("redditposts", comments)
 
+        posts_len = len[posts]
+        end_time = time.time()
+        total_time = end_time - start_time
+        print(f'Reddit: {posts_len} posts scraped in {total_time} seconds.')
+
 async def run_twitter(twitterscraper, manager):
     async with async_playwright() as p:
-        browser = await p.chromium.launch(args=['--start-maximized'], headless=False)
+        start_time = time.time()
 
-        #keyword = 'EuroVision'
+        browser = await p.chromium.launch(args=['--start-maximized'], headless=False)
 
         page = await twitterscraper.login_account(browser)
         if page is None:
@@ -48,6 +56,11 @@ async def run_twitter(twitterscraper, manager):
         twitterdata = await twitterscraper.scraper(browser, links)
 
         await manager.insert_documents("tweets", twitterdata)
+
+        links_len = len[links]
+        end_time = time.time()
+        total_time = end_time - start_time
+        print(f'Twitter: {links_len} tweets scraped in {total_time} seconds.')
 
 async def main():
     username = None

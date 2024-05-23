@@ -18,6 +18,7 @@ from InterfaceScraper import IScraper
 import re
 import asyncio
 import datetime
+import time
 
 class RedditScraper(IScraper):
     
@@ -233,6 +234,8 @@ async def main():
         browser = await p.chromium.launch(args=['--start-maximized'], headless=False)
         scraper = RedditScraper(query="Justin Bieber")
 
+        start_time = time.time()
+
         subreddits = await scraper.subreddit_scrape(browser)
         print("Subreddits:", subreddits)
 
@@ -244,6 +247,11 @@ async def main():
             print("Comments:", comments)
 
         await browser.close()
+
+        end_time = time.time()
+        execution_time = end_time - start_time
+        posts_length = len[posts]
+        print(f'Execution time: {execution_time} seconds for {posts_length} posts')
 
 if __name__ == "__main__":
     asyncio.run(main())
