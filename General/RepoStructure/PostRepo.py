@@ -7,13 +7,17 @@ from .IPostRepo import IPostRepository
 
 class PostRepo(IPostRepository):
 
+    def __init__(self) -> None:
+        super().__init__()
+        
     #Fields
     document = [{}]
     collection = str
 
     #Methods
     def add_post(document):
-        print("add post")
+        ...
+        
 
     def remove_post(document):
         print("remove post")

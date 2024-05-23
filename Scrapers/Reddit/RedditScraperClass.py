@@ -1,7 +1,8 @@
 '''
 Reddit scraper implementation
 '''
-
+import sys, os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 #Imports
 #from .ForumEntity import Forum
 #from ForumEntity import Forum
@@ -11,6 +12,7 @@ Reddit scraper implementation
 from playwright.async_api import async_playwright
 from bson import ObjectId
 from binascii import hexlify, unhexlify
+
 from InterfaceScraper import IScraper
 
 import re
@@ -200,11 +202,6 @@ class RedditScraper(IScraper):
             except Exception as e:
                 print(f"Error: {e}")
                 return {}
-            
-            # this description shit clearly doesn't belong here
-            description_selector = '#siteTable div div > div.expando div.md'            #'[slot="text-body"] p'
-            description_element = await page.query_selector(description_selector)
-            description = { "description" :  await description_element.inner_text() if description_element else ""}
             
             # absolute abomination of JS eval
             comment_data = await page.evaluate("""

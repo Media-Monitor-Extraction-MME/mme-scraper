@@ -1,11 +1,12 @@
 '''
 Twitter scraper implementation
 '''
-
+import sys, os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 #Imports
 from .AccountClass import *
 from .TweetEntity import *
-from InterfaceScraper import IScraper
+#from InterfaceScraper import IScraper
 from playwright.async_api import async_playwright
 
 import asyncio
@@ -14,14 +15,16 @@ from bson import ObjectId
 import logging
 
 
-class TwitterScraper(IScraper):
-	def __init__(self, link_gather_account_username, link_gather_account_password):
+class TwitterScraper:
+	def __init__(self, link_gather_account_username, link_gather_account_password, keyword):
 		self.link_gather_account_username = link_gather_account_username
 		self.link_gather_account_password = link_gather_account_password
+		self.keyword = keyword
 		logging.basicConfig(level=logging.INFO)
 
 	link_gather_account = Account
 	link = None
+	keyword = str
 
 	async def login_account(self, browser, retry_count=0):
 		'''
@@ -82,7 +85,7 @@ class TwitterScraper(IScraper):
 					logging.error("Max login tries reached, the application will now shutdown")
 				'''
 	
-	async def link_gatherer(self, page, keyword):
+	async def link_gatherer(self, page):
 		links = []
 
 		search_selector_id = '[data-testid="SearchBox_Search_Input"]'
@@ -96,7 +99,7 @@ class TwitterScraper(IScraper):
 		await asyncio.sleep(1)
 
 		keyword_selector = 'input[name="allOfTheseWords"]'
-		await page.type(keyword_selector, keyword, delay=150)
+		await page.type(keyword_selector, self.keyword, delay=150)
 		await asyncio.sleep(2)
 			
 			#Filtering based on hashtags
