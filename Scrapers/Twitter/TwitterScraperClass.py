@@ -325,7 +325,21 @@ class TwitterScraper(IScraper):
 
 		return results
 	
-	async def scrape(self, frequency, keywords):
-		...
+	async def scrape(self, keyword):
+		async with async_playwright() as p:
+			browser = p.chromium.launch(args=['--start-maximized'], headless=False)
+
+			self.keyword = keyword
+
+			page = self.login_account(browser=browser)
+			if page is None:
+				logging.error("Page is none")
+			links = await self.link_gatherer(page=page)
+			twitterdata = await self.scraper(browser=browser, links=links)
+
+		return twitterdata
+			
+
+
 
 

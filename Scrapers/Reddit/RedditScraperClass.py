@@ -224,8 +224,18 @@ class RedditScraper(IScraper):
                 
         return comments_data
     
-    async def scrape(self, frequency, keywords):
-        ...
+    async def scrape(self, keyword):
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(args=['--start-maximized'], headless=False)
+
+            self.query = keyword
+            
+            subreddits = await self.subreddit_scrape(browser=browser)
+            posts = await self.post_scrape(forums=subreddits, browser=browser)
+            if posts:
+                comments = await self.content_scrape(posts=posts, browser=browser)
+
+        return posts, comments
     
 
 async def main():
