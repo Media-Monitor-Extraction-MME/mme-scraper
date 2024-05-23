@@ -52,7 +52,7 @@ async def run_twitter(twitterscraper, manager):
 async def main():
     username = None
     password = None
-    keyword = "Toni Kroos"
+    keyword = "Atalanta"
 
     try:
         with open('Scrapers/Twitter/account_data/accounts.txt', 'r') as file:
@@ -64,13 +64,20 @@ async def main():
     except FileNotFoundError as fe:
         logging.error(f"File not found: {fe}")    
 
-    twitterscraper = TwitterScraper(link_gather_account_username=username, link_gather_account_password=password, keyword=keyword)
-    redditscraper = RedditScraper(query=keyword)
+    twitterscraper = TwitterScraper(link_gather_account_username=username, link_gather_account_password=password, keyword=None)
+    redditscraper = RedditScraper(query=None)
     manager = DBManager(db_name='scraped_data')
 
+    '''
     await asyncio.gather(
         run_twitter(twitterscraper=twitterscraper, manager=manager),
         run_reddit(redditscraper=redditscraper, manager=manager)
+    )
+    '''
+
+    await asyncio.gather(
+        twitterscraper.scrape(keyword=keyword),
+        redditscraper.scrape(keyword=keyword)
     )
 
 asyncio.run(main())
