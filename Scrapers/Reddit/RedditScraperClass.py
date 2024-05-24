@@ -219,8 +219,17 @@ class RedditScraper(IScraper):
                             return Array.from(rootComments).map(getCommentData);
                         })()
                     """)
-            comment_data = await process_comments(comment_data, post['post_id'])
-            comments_data.append(comment_data)
+            if not comment_data:
+                print(f"No comments for post {post['post_id']}")
+            else:
+                print(f"Found {len(comment_data)} root comments for post {post['post_id']}")
+                for idx, c in enumerate(comment_data):
+                    print(f"Comment {idx}: {c['comment'][:100]}...")
+
+            processed_comments = await process_comments(comment_data, post['post_id'])
+            comments_data.extend(processed_comments)
+            #comment_data = await process_comments(comment_data, post['post_id'])
+            #comments_data.append(comment_data)
                 
         return comments_data
     
@@ -236,24 +245,3 @@ class RedditScraper(IScraper):
                 comments = await self.content_scrape(posts=posts, browser=browser)
 
         return posts, comments
-    
-
-async def main():
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(args=['--start-maximized'], headless=False)
-        scraper = RedditScraper(query="Justin Bieber")
-
-        subreddits = await scraper.subreddit_scrape(browser)
-        print("Subreddits:", subreddits)
-
-        posts = await scraper.post_scrape(forums=subreddits, browser=browser)
-        print("Posts:", posts)
-
-        if posts:
-            comments = await scraper.content_scrape(posts=posts, browser=browser)
-            print("Comments:", comments)
-
-        await browser.close()
-
-if __name__ == "__main__":
-    asyncio.run(main())

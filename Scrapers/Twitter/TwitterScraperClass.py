@@ -43,7 +43,6 @@ class TwitterScraper(IScraper):
 		context = None
 
 		try:
-			async with async_playwright():
 				context = await browser.new_context(no_viewport=True)
 				if context is None:
 					logging.error("Failed to create new browser context")
@@ -224,6 +223,7 @@ class TwitterScraper(IScraper):
 				async def scraping_logic(page, link):
 						print(link)
 						await page.goto(link)
+						num_code = (re.match(r'\/[A-Za-z0-9_]+\/status\/[0-9]+$', link)).group(1)
 
 						'''
 						cookies_button = page.get_by_text("Refuse non-essential cookies")
@@ -298,8 +298,7 @@ class TwitterScraper(IScraper):
 
 						tweet_comments = ''
 
-						num = random.randint(0, 1000000)
-						hex_string = f'{num:024x}'
+						hex_string = num_code.zfill(24)
 						objectId = ObjectId(hex_string)
 
 						tweet = Tweet(_id=objectId,
