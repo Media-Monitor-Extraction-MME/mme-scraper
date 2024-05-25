@@ -98,6 +98,7 @@ class RedditScraper(IScraper):
         Returns:
             A list of dictionaries containing post data(id,title,source,upvotes,desc,url,time) in the subreddit.
         """
+        #Helper Function
         async def map_post(post, attributes):
             mapping = {
                 'data-fullname': 'post_id',
@@ -125,7 +126,9 @@ class RedditScraper(IScraper):
             
             return post
         
+        #Helper Function
         async def process_element(page, element):
+        
             post = {
                 'post_id':None,
                 'origin': 'Reddit',
@@ -144,21 +147,30 @@ class RedditScraper(IScraper):
                 data_fullname = next(attr['value'] for attr in attributes if attr['name'] == 'data-fullname')
                 post['title'] = await (await page.query_selector(f"div[data-fullname='{data_fullname}'] > div.entry.unvoted > div.top-matter > p.title > a" )).inner_text()
                 return post
-        posts = []
-        context = await browser.new_context()
-
-        for subreddit in forums:
-            page = await context.new_page()
-            await page.goto("https://old.reddit.com/"+subreddit, wait_until='domcontentloaded')
+        
+        #Initialize every subreddit in batches of 3
+        async def launch_contexts(browser, forums):
+            contexts = await asyncio.gather(*(browser.new_context() for _ in range(5)))
+            for i in range(0, len(forums), 3):
+                batch = forums[i:i+3]
+                tasks = []
+                for j, subreddit in enumerate(batch):
+                    context = contexts[j % len(contexts)]
+                    page = await context.new_page()
+                    tasks.append(load_pages(page, subreddit))
+                tasks_results = await asyncio.gather(*tasks)
+            return tasks_results[0]
+        
+        async def load_pages(page, subreddit):
+            await page.goto(f"https://old.reddit.com/{subreddit}", wait_until='domcontentloaded')
             await page.wait_for_load_state('load')
-
-            id_selector = 'div[data-fullname]'
-            elements = await page.query_selector_all(id_selector)
+            elements = await page.query_selector_all('div[data-fullname]')    
             tasks = [process_element(page, element) for element in elements]
             posts = await asyncio.gather(*tasks)
-
-            return posts
+            return posts   
         
+        scraped_posts = await launch_contexts(browser, forums)
+        return scraped_posts
 
     async def content_scrape(self, posts, browser) -> dict:
         """
@@ -192,19 +204,9 @@ class RedditScraper(IScraper):
                 processed_comments.append(processed_comment)
             return processed_comments
         
-        context = await browser.new_context()
-
-        for post in posts:
-            page = await context.new_page()
-            url = f"https://old.reddit.com/{post['perma_link']}"
-            try:
-                await page.goto(url, wait_until='domcontentloaded')
-                #await asyncio.sleep(0.3)
-            except Exception as e:
-                print(f"Error: {e}")
-                return {}
-            
-            # absolute abomination of JS eval
+        async def load_pages(page, post):
+            await page.goto(f"https://old.reddit.com/{post['perma_link']}", wait_until='domcontentloaded')
+            await page.wait_for_load_state('load')
             comment_data = await page.evaluate("""
                         (function fetchComments() {
                             function getCommentData(commentElement) {
@@ -220,10 +222,28 @@ class RedditScraper(IScraper):
                             return Array.from(rootComments).map(getCommentData);
                         })()
                     """)
-            comment_data = await process_comments(comment_data, post['post_id'])
-            comments_data.append(comment_data)
+            comments_data = await process_comments(comment_data, post['post_id'])
+            #comments = [comment for sublist in comments_data for comment in sublist if comment is not None]
+
+            return comments_data  
+            
+        async def launch_contexts(browser, posts):
+            content_scraper_tasks = []
+            contexts = await asyncio.gather(*(browser.new_context() for _ in range(5)))
+            for i, post in enumerate(posts):
+                context = contexts[i % len(contexts)]
+                page = await context.new_page()
+                timeout = 60000
+                page.set_default_timeout(timeout)
+                content_scraper_tasks.append(load_pages(page, post))
+    
+            comments_data = await asyncio.gather(*content_scraper_tasks)
+            comments = [comment for sublist in comments_data for comment in sublist if comment is not None]
+            return comments
+
+        comments = await launch_contexts(browser, posts)
                 
-        return comments_data
+        return comments
     
     async def scrape(self, frequency, keywords):
         ...
@@ -250,7 +270,7 @@ async def main():
 
         end_time = time.time()
         execution_time = end_time - start_time
-        posts_length = len[posts]
+        posts_length = len(posts)
         print(f'Execution time: {execution_time} seconds for {posts_length} posts')
 
 if __name__ == "__main__":
