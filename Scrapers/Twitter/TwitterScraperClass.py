@@ -216,6 +216,8 @@ class TwitterScraper(IScraper):
 		for i in range(0, len(links), pages_per_context):
 			context = await browser.new_context()
 			contexts.append(context)
+			timeout = 60000
+			page.set_default_timeout(timeout)
 			pages = await asyncio.gather(*[context.new_page() for _ in range(pages_per_context)])
 
 			#Assign links to pages

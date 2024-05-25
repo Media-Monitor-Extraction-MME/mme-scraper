@@ -242,6 +242,7 @@ class RedditScraper(IScraper):
             return comments
 
         comments = await launch_contexts(browser, posts)
+
                 
         return comments
     

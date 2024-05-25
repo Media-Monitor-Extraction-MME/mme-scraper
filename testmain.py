@@ -23,7 +23,7 @@ import logging
 import asyncio
 import time
 
-async def run_reddit(redditscraper, manager):
+async def run_reddit(redditscraper):
     async with async_playwright() as p:
         start_time = time.time()
 
@@ -35,15 +35,17 @@ async def run_reddit(redditscraper, manager):
 
         if posts:
             comments = await redditscraper.content_scrape(posts=posts, browser=browser)
-            
-        await manager.insert_documents("redditposts", comments)
-
-        posts_len = len[posts]
+    
+        posts_len = len(posts)
         end_time = time.time()
         total_time = end_time - start_time
         print(f'Reddit: {posts_len} posts scraped in {total_time} seconds.')
+        
+        await browser.close()
 
-async def run_twitter(twitterscraper, manager):
+        return posts, comments
+
+async def run_twitter(twitterscraper):
     async with async_playwright() as p:
         start_time = time.time()
 
@@ -55,12 +57,15 @@ async def run_twitter(twitterscraper, manager):
         links = await twitterscraper.link_gatherer(page)
         twitterdata = await twitterscraper.scraper(browser, links)
 
-        await manager.insert_documents("tweets", twitterdata)
-
         links_len = len[links]
         end_time = time.time()
         total_time = end_time - start_time
         print(f'Twitter: {links_len} tweets scraped in {total_time} seconds.')
+        await browser.close()
+        
+        return twitterdata
+    
+
 
 async def main():
     username = None
@@ -77,14 +82,25 @@ async def main():
     except FileNotFoundError as fe:
         logging.error(f"File not found: {fe}")    
 
+    # init scrapers
     twitterscraper = TwitterScraper(link_gather_account_username=username, link_gather_account_password=password, keyword=keyword)
     redditscraper = RedditScraper(query=keyword)
-    manager = DBManager(db_name='scraped_data')
 
-    await asyncio.gather(
-        run_twitter(twitterscraper=twitterscraper, manager=manager),
-        run_reddit(redditscraper=redditscraper, manager=manager)
+    # scrape the data
+    twitter_data, reddit_data = await asyncio.gather(
+        run_twitter(twitterscraper=twitterscraper),
+        run_reddit(redditscraper=redditscraper)
     )
+    
+    # upload data
+    manager = DBManager(db_name='scraped_data')
+    async def insert_documents_in_transaction(session):
+        await manager.insert_documents("redditcomments", reddit_data[0], session=session)
+        await manager.insert_documents("redditcomments", reddit_data[1], session=session)
+        await manager.insert_documents("twitterdata", twitter_data, session=session)
+    
+    async with await manager.client.start_session() as session:
+        result = await session.start_transaction(insert_documents_in_transaction)
 
 asyncio.run(main())
 
