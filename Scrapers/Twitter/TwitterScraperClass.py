@@ -254,8 +254,6 @@ class TwitterScraper(IScraper):
 						else:
 							tweet_content = 'Content element error'
 
-						print(tweet_content)
-
 						# Extract the date
 						date_pattern = r"\d{1,2}:\d{2} [ap]m · \d{1,2} \w+ \d{4}"
 						date = re.search(date_pattern, tweet_content)
