@@ -196,11 +196,13 @@ class TwitterScraper(IScraper):
 
 		await page.goto('https://twitter.com/logout')
 
-		confirm_logout = '[data-testid="confirmationSheetConfirm"]'
-		if confirm_logout:
-			await page.click(confirm_logout)
-		else:
-			return
+		#confirm_logout = '[data-testid="confirmationSheetConfirm"]'
+		#await page.get_by_text("Log out").click()
+
+		#if confirm_logout:
+			#await page.click(confirm_logout)
+		#else:
+			#return
 			
 		print(links)	
 		return links
@@ -216,8 +218,8 @@ class TwitterScraper(IScraper):
 		for i in range(0, len(links), pages_per_context):
 			context = await browser.new_context()
 			contexts.append(context)
-			timeout = 60000
-			page.set_default_timeout(timeout)
+			#timeout = 60000
+			#page.set_default_timeout(timeout)
 			pages = await asyncio.gather(*[context.new_page() for _ in range(pages_per_context)])
 
 			#Assign links to pages

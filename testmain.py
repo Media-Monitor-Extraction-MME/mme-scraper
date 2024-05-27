@@ -4,10 +4,10 @@ Entry point for testing cases.
 
 #Imports
 from General.DB.DataBaseManager import DBManager
-from General.ScraperService import ScraperService
+#from General.ScraperService import ScraperService
 from General.Platforms import _Platforms
-from General.RepoStructure.CommentRepo import CommentRepo
-from General.RepoStructure.CommunityRepo import CommunityRepo
+#from General.RepoStructure.CommentRepo import CommentRepo
+#from General.RepoStructure.CommunityRepo import CommunityRepo
 from General.RepoStructure.PostRepo import PostRepo
 
 from Scrapers.Reddit.RedditScraperClass import RedditScraper
@@ -57,7 +57,7 @@ async def run_twitter(twitterscraper):
         links = await twitterscraper.link_gatherer(page)
         twitterdata = await twitterscraper.scraper(browser, links)
 
-        links_len = len[links]
+        links_len = len(links)
         end_time = time.time()
         total_time = end_time - start_time
         print(f'Twitter: {links_len} tweets scraped in {total_time} seconds.')
@@ -70,7 +70,7 @@ async def run_twitter(twitterscraper):
 async def main():
     username = None
     password = None
-    keyword = "Toni Kroos"
+    keyword = "Rafah"
 
     try:
         with open('Scrapers/Twitter/account_data/accounts.txt', 'r') as file:
