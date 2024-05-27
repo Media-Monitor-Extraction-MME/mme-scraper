@@ -22,6 +22,7 @@ import unittest
 import logging
 import asyncio
 import time
+import json
 
 async def run_reddit(redditscraper):
     async with async_playwright() as p:
@@ -83,24 +84,34 @@ async def main():
         logging.error(f"File not found: {fe}")    
 
     # init scrapers
-    twitterscraper = TwitterScraper(link_gather_account_username=username, link_gather_account_password=password, keyword=keyword)
+    #twitterscraper = TwitterScraper(link_gather_account_username=username, link_gather_account_password=password, keyword=keyword)
     redditscraper = RedditScraper(query=keyword)
 
     # scrape the data
-    twitter_data, reddit_data = await asyncio.gather(
-        run_twitter(twitterscraper=twitterscraper),
+    reddit_data = await asyncio.gather(
+        #run_twitter(twitterscraper=twitterscraper),
         run_reddit(redditscraper=redditscraper)
     )
+    reddit_posts = reddit_data[0][0]
+    reddit_comments = reddit_data[0][1]
+    # Save twitter_data to a JSON file
+   # with open('twitter_data.json', 'w') as file:
+    #    json.dump(twitter_data, file)
     
     # upload data
     manager = DBManager(db_name='scraped_data')
-    async def insert_documents_in_transaction(session):
-        await manager.insert_documents("redditcomments", reddit_data[0], session=session)
-        await manager.insert_documents("redditcomments", reddit_data[1], session=session)
-        await manager.insert_documents("twitterdata", twitter_data, session=session)
+    async def insert_documents(session):
+        #DEBUG
+        #with open('twitter_data.json') as f:
+         #   twitter_data = json.load(f)
+            
+        await manager.insert_documents("redditposts", reddit_posts, session=session)
+        await manager.insert_documents("redditcomments", reddit_comments, session=session)
+        #await manager.insert_documents("twitterdata", twitter_data, session=session)
     
     async with await manager.client.start_session() as session:
-        result = await session.start_transaction(insert_documents_in_transaction)
+        async with session.start_transaction():
+            await insert_documents(session=session)
 
 asyncio.run(main())
 

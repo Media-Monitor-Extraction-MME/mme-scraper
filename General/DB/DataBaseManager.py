@@ -59,9 +59,10 @@ class DBManager(IDBManager):
         cursor = self.db[collection].find(filter, {"_id": 1})
         return [doc["_id"] for doc in await cursor.to_list(length=100)]
 
-    async def insert_documents(self, collection: str, newdoc: List[Dict[str, Any]]) -> List[Any]:
+    async def insert_documents(self, collection: str, newdoc: list[dict], session=None) -> List[Any]:
         """
         Insert new documents and return their IDs.
         """
-        result = await self.db[collection].insert_many(newdoc)
+        result = await self.db[collection].insert_many(newdoc, session=session)
+        print(f"{len(result.inserted_ids)} documents inserted.")
         return result.inserted_ids

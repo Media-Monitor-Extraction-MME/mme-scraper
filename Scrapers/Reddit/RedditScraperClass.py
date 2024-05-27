@@ -121,7 +121,7 @@ class RedditScraper(IScraper):
             
             if post['timestamp']:
                 timestamp_seconds = int(post['timestamp']) / 1000
-                dt = datetime.date.fromtimestamp(timestamp_seconds)
+                dt = datetime.datetime.fromtimestamp(timestamp_seconds)
                 post['timestamp'] = dt
             
             return post
