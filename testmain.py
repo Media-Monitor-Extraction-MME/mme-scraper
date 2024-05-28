@@ -70,7 +70,7 @@ async def run_twitter(twitterscraper):
 async def main():
     username = None
     password = None
-    keyword = "Rafah"
+    keyword = "Nicki Minaj"
 
     try:
         with open('Scrapers/Twitter/account_data/accounts.txt', 'r') as file:
@@ -93,14 +93,19 @@ async def main():
     )
     
     # upload data
-    manager = DBManager(db_name='scraped_data')
-    async def insert_documents_in_transaction(session):
-        await manager.insert_documents("redditcomments", reddit_data[0], session=session)
-        await manager.insert_documents("redditcomments", reddit_data[1], session=session)
-        await manager.insert_documents("twitterdata", twitter_data, session=session)
+    manager = DBManager(db_name='scraped_data_test')
+    await manager.insert_documents("redditposts", reddit_data[0])
+    await manager.insert_documents("redditcomments", reddit_data[1])
+    await manager.insert_documents("twitterdata", twitter_data)
+    #async def insert_documents_in_transaction(session):
+    #    await manager.insert_documents("redditcomments", reddit_data[0], session=session)
+    #    await manager.insert_documents("redditcomments", reddit_data[1], session=session)
+    #    await manager.insert_documents("twitterdata", twitter_data, session=session)
     
-    async with await manager.client.start_session() as session:
-        result = await session.start_transaction(insert_documents_in_transaction)
+    #async with await manager.client.start_session() as session:
+    #    result = await session.start_transaction(insert_documents_in_transaction)
+
+    
 
 asyncio.run(main())
 
