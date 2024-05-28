@@ -88,7 +88,7 @@ async def main():
     redditscraper = RedditScraper(query=keyword)
 
     # scrape the data
-    reddit_data = await asyncio.gather(
+    twitter_data, reddit_data = await asyncio.gather(
         #run_twitter(twitterscraper=twitterscraper),
         run_reddit(redditscraper=redditscraper)
     )
@@ -107,7 +107,7 @@ async def main():
             
         await manager.insert_documents("redditposts", reddit_posts, session=session)
         await manager.insert_documents("redditcomments", reddit_comments, session=session)
-        #await manager.insert_documents("twitterdata", twitter_data, session=session)
+        await manager.insert_documents("twitterdata", twitter_data, session=session)
     
     async with await manager.client.start_session() as session:
         async with session.start_transaction():
