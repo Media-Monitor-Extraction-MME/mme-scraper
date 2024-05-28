@@ -71,7 +71,7 @@ async def run_twitter(twitterscraper):
 async def main():
     username = None
     password = None
-    keyword = "Rafah"
+    keyword = "Nicki Minaj"
 
     try:
         with open('Scrapers/Twitter/account_data/accounts.txt', 'r') as file:
