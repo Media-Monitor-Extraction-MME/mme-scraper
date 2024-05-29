@@ -310,15 +310,13 @@ class TwitterScraper(IScraper):
 							objectId = ObjectId(hex_string)
 
 							tweet = Tweet(_id=objectId,
-											link=link, 
-											content=tweet_content_with_emoji, 
-											date=tweet_date, 
-											likes=tweet_likes, 
-											reposts=tweet_reposts, 
-											quotes=tweet_quotes, 
-											bookmarks=tweet_bookmarks, 
+											url=link, 
+											title=tweet_content_with_emoji, 
+											time=tweet_date, 
+											upvotes=tweet_likes,
 											views=tweet_views, 
-											comments=tweet_comments)
+											reposts=tweet_reposts, 
+											)
 							
 							return tweet.to_doc() 
 						except Exception as e:
