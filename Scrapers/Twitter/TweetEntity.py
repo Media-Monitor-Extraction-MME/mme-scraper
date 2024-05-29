@@ -4,28 +4,24 @@ Tweets need to be morphed into this structure to enforce correct data storage
 '''
 
 class Tweet:
-    def __init__(self, _id: str, link: str, content: str, date: str, likes: str, reposts: str, quotes: str, bookmarks: str, views: str, comments: str):
+    def __init__(self, _id: str, url: str, title: str, time: str, upvotes: str, views: str, reposts: str, origin: str ="Twitter"):
         self._id = _id
-        self.link = link
-        self.content = content
-        self.date = date
-        self.likes = likes
-        self.reposts = reposts
-        self.quotes = quotes
-        self.bookmarks = bookmarks
+        self.url = url
+        self.title = title
+        self.time = time
+        self.upvotes = upvotes
         self.views = views
-        self.comments = comments
+        self.reposts = reposts
+        self.origin = origin
 
     def to_doc(self):
         return {
-            "ObjectId": self._id,
-            "link": self.link,
-            "content": self.content,
-            "date": self.date,
-            "likes": self.likes,
-            "reposts": self.reposts,
-            "quotes": self.quotes,
-            "bookmarks": self.bookmarks,
+            "_id": self._id,
+            "url": self.url,
+            "title": self.title,
+            "time": self.time,
+            "upvotes": self.upvotes,
             "views": self.views,
-            "comments": self.comments
-        }
+            "reposts": self.reposts,
+            "origin": self.origin
+            }
