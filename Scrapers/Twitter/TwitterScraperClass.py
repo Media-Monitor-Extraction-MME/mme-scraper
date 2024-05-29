@@ -195,11 +195,13 @@ class TwitterScraper(IScraper):
 
 		await page.goto('https://twitter.com/logout')
 
-		confirm_logout = '[data-testid="confirmationSheetConfirm"]'
-		if confirm_logout:
-			await page.click(confirm_logout)
-		else:
-			return
+		#confirm_logout = '[data-testid="confirmationSheetConfirm"]'
+		#await page.get_by_text("Log out").click()
+
+		#if confirm_logout:
+			#await page.click(confirm_logout)
+		#else:
+			#return
 			
 		print(links)	
 		return links
@@ -215,6 +217,8 @@ class TwitterScraper(IScraper):
 		for i in range(0, len(links), pages_per_context):
 			context = await browser.new_context()
 			contexts.append(context)
+			#timeout = 60000
+			#page.set_default_timeout(timeout)
 			pages = await asyncio.gather(*[context.new_page() for _ in range(pages_per_context)])
 
 			#Assign links to pages
@@ -222,6 +226,117 @@ class TwitterScraper(IScraper):
 			for page, link in zip(pages, links[i:i+pages_per_context]):
 				async def scraping_logic(page, link):
 						print(link)
+
+						try:
+							await page.goto(link)
+							num_code = (re.match(r'\/[A-Za-z0-9_]+\/status\/[0-9]+$', link)).group(1)
+
+
+							'''
+							cookies_button = page.get_by_text("Refuse non-essential cookies")
+							if cookies_button:
+								await page.get_by_text("Refuse non-essential cookies").click()
+							else:
+								return
+							'''
+							
+							#Content
+							tweet_content = ''
+							try:
+								element = page.get_by_test_id('tweet')
+
+								if element:
+									text_content = await element.text_content()
+									tweet_content += text_content
+
+									img_elements = await page.query_selector_all('img')
+									for img in img_elements:
+										alt_text = await img.get_attribute('alt')
+										if alt_text:
+											tweet_content += f" {alt_text} "
+								else:
+									tweet_content = 'Content element error'
+							except Exception as e:
+								print(f"Error loading tweet content {e}")
+								tweet_content = ''
+
+							# Extract the date
+							date_pattern = r"\d{1,2}:\d{2} [ap]m · \d{1,2} \w+ \d{4}"
+							date = re.search(date_pattern, tweet_content)
+							tweet_date = date.group(0) if date else None
+
+							# Extract views, reposts, quotes, likes, and bookmarks
+							views_pattern = r"(\d[\d,.KkMm]*) Views"
+							reposts_pattern = r"(\d[\d,.KkMm]*) Reposts"
+							quotes_pattern = r"(\d[\d,.KkMm]*) Quotes"
+							likes_pattern = r"(\d[\d,.KkMm]*) Likes"
+							bookmarks_pattern = r"(\d[\d,.KkMm]*) Bookmarks"
+
+							views = re.search(views_pattern, tweet_content)
+							reposts = re.search(reposts_pattern, tweet_content)
+							quotes = re.search(quotes_pattern, tweet_content)
+							likes = re.search(likes_pattern, tweet_content)
+							bookmarks = re.search(bookmarks_pattern, tweet_content)
+
+							tweet_views = views.group(1) if views else None
+							tweet_reposts = reposts.group(1) if reposts else None
+							tweet_quotes = quotes.group(1) if quotes else None
+							tweet_likes = likes.group(1) if likes else None
+							tweet_bookmarks = bookmarks.group(1) if bookmarks else None
+
+							emoji_pattern = r"[\U00010000-\U0010ffff]"
+
+							# Find the start index of the statistical data
+							data_pattern_start = re.search(date_pattern, tweet_content)
+							data_start_index = data_pattern_start.start() if data_pattern_start else None
+
+							# Extract text content up to the point where statistical data starts
+							if data_start_index:
+								tweet_content_text = tweet_content[:data_start_index].strip()
+							else:
+								tweet_content_text = tweet_content
+
+							# Remove line breaks and multiple spaces
+							tweet_content_text = tweet_content_text.replace('\n', ' ')
+							tweet_content_text = ' '.join(tweet_content_text.split())
+
+							# Find and append the emojis
+							emoji = re.findall(emoji_pattern, tweet_content)
+							tweet_content_with_emoji = tweet_content_text + " " + ''.join(emoji).strip()
+
+							tweet_comments = ''
+
+							hex_string = num_code.zfill(24)
+							objectId = ObjectId(hex_string)
+
+							tweet = Tweet(_id=objectId,
+											link=link, 
+											content=tweet_content_with_emoji, 
+											date=tweet_date, 
+											likes=tweet_likes, 
+											reposts=tweet_reposts, 
+											quotes=tweet_quotes, 
+											bookmarks=tweet_bookmarks, 
+											views=tweet_views, 
+											comments=tweet_comments)
+							
+							return tweet.to_doc() 
+						except Exception as e:
+							print(f"Error in scraping: {e}")
+							tweet = Tweet(_id=objectId,
+					 						link=link, 
+											content='', 
+											date='', 
+											likes='', 
+											reposts='', 
+											quotes='', 
+											bookmarks='', 
+											views='', 
+											comments=''
+					 						)
+						finally:
+							await page.close()
+
 						await page.goto(link)
 						num_code = (re.match(r'\/[A-Za-z0-9_]+\/status\/[0-9]+$', link)).group(1)
 
@@ -313,6 +428,7 @@ class TwitterScraper(IScraper):
 										comments=tweet_comments)
 						
 						return tweet.to_doc() 
+
 
 				tasks.append(scraping_logic(page, link))
 

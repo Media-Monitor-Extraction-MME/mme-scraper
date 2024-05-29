@@ -4,11 +4,11 @@ Entry point for testing cases.
 
 #Imports
 from General.DB.DataBaseManager import DBManager
-from General.scraperservice import ScraperService
+#from General.ScraperService import ScraperService
 from General.Platforms import _Platforms
-from General.RepoStructure.commentrepo import CommentRepo
-from General.RepoStructure.communityrepo import CommunityRepo
-from General.RepoStructure.postrepo import PostRepo
+#from General.RepoStructure.CommentRepo import CommentRepo
+#from General.RepoStructure.CommunityRepo import CommunityRepo
+#from General.RepoStructure.PostRepo import PostRepo
 
 from Scrapers.Reddit.RedditScraperClass import RedditScraper
 from Scrapers.Twitter.TwitterScraperClass import TwitterScraper
@@ -23,12 +23,15 @@ import unittest
 
 import logging
 import asyncio
+
+import time
 import numpy as np
 import json
 
-
-async def run_reddit(redditscraper, manager):
+async def run_reddit(redditscraper):
     async with async_playwright() as p:
+        start_time = time.time()
+
         browser = await p.chromium.launch(args=['--start-maximized'], headless=False)
 
         subreddits = await redditscraper.subreddit_scrape(browser)
@@ -36,52 +39,23 @@ async def run_reddit(redditscraper, manager):
         posts = await redditscraper.post_scrape(forums=subreddits, browser=browser)
 
         if posts:
-            commentsArrays = await redditscraper.content_scrape(posts=posts, browser=browser)
-            if isinstance(commentsArrays, list):
-                logging.info("commentsArrays is a list")
-                valid_arrays = []
-                for i, arr in enumerate(commentsArrays):
-                    if isinstance(arr, np.ndarray):
-                        logging.info(f"Element {i} is a NumPy array with shape {arr.shape}")
-                        valid_arrays.append(arr)
-                    else:
-                        try:
-                            arr = np.array(arr)
-                            logging.info(f"Element {i} converted to NumPy array with shape {arr.shape}")
-                            valid_arrays.append(arr)
-                        except Exception as e:
-                            logging.error(f"Element {i} cannot be converted to NumPy array: {e}")
-                if len(valid_arrays) == len(commentsArrays):
-                    logging.info("All elements in commentsArrays are now NumPy arrays")
-                    commentsArrays = valid_arrays
-                else:
-                    logging.error("Some elements could not be converted to NumPy arrays")
-                    return
-            else:
-                logging.error("commentsArrays is not a list")
+
+            comments = await redditscraper.content_scrape(posts=posts, browser=browser)
+    
+        posts_len = len(posts)
+        end_time = time.time()
+        total_time = end_time - start_time
+        print(f'Reddit: {posts_len} posts scraped in {total_time} seconds.')
         
-        try:
-            flat_comments = [arr.flatten() for arr in commentsArrays]
-            comments = np.concatenate(flat_comments)    
-            len_comments = len(comments)
-            print(f"Length of comments: {len_comments} Comments: {comments}")
+        await browser.close()
 
-            with open("comments_output.json", "w") as file:
-                json.dump(comments.tolist(), file)
-            await manager.insert_documents("redditposts", comments)
-            logging.info("Succesfully pushed reddit to database")
-        
-        except Exception as e:
-            logging.error(f"Fuck the manager: {e}")
-        finally:
-            await browser.close()
+        return posts, comments
 
-
-async def run_twitter(twitterscraper, manager):
+async def run_twitter(twitterscraper):
     async with async_playwright() as p:
-        browser = await p.chromium.launch(args=['--start-maximized'], headless=False)
+        start_time = time.time()
 
-        #keyword = 'EuroVision'
+        browser = await p.chromium.launch(args=['--start-maximized'], headless=False)
 
         page = await twitterscraper.login_account(browser)
         if page is None:
@@ -89,16 +63,19 @@ async def run_twitter(twitterscraper, manager):
         links = await twitterscraper.link_gatherer(page)
         twitterdata = await twitterscraper.scraper(browser, links)
 
+        links_len = len(links)
+        end_time = time.time()
+        total_time = end_time - start_time
+        print(f'Twitter: {links_len} tweets scraped in {total_time} seconds.')
         await browser.close()
-
-        if manager:
-            await manager.insert_documents("tweets", twitterdata)
-            logging.info("Succesfully pushed twitter to database")
+        
+        return twitterdata
 
 async def main():
     username = None
     password = None
-    keyword = "Atalanta"
+    keyword = "Nicki Minaj"
+
 
     try:
         with open('Scrapers/Twitter/account_data/accounts.txt', 'r') as file:
@@ -110,22 +87,42 @@ async def main():
     except FileNotFoundError as fe:
         logging.error(f"File not found: {fe}")    
 
+    # init scrapers
     twitterscraper = TwitterScraper(link_gather_account_username=username, link_gather_account_password=password, keyword=keyword)
     redditscraper = RedditScraper(query=keyword)
-    _manager = DBManager(db_name='scraped_data')
+
+    # scrape the data
+    twitter_data, reddit_data = await asyncio.gather(
+        run_twitter(twitterscraper=twitterscraper),
+        run_reddit(redditscraper=redditscraper)
+    )
+    reddit_posts = reddit_data[0]
+    reddit_comments = reddit_data[1]
+    # Save twitter_data to a JSON file
+   # with open('twitter_data.json', 'w') as file:
+    #    json.dump(twitter_data, file)
+    
+    # upload data
     manager = DBManager(db_name='scraped_data')
+    async def insert_documents(session):
+        #DEBUG
+        #with open('twitter_data.json') as f:
+         #   twitter_data = json.load(f)
+            
+        await manager.insert_documents("redditposts", reddit_posts, session=session)
+        await manager.insert_documents("redditcomments", reddit_comments, session=session)
+        await manager.insert_documents("twitterdata", twitter_data, session=session)
+    
+    async with await manager.client.start_session() as session:
+        async with session.start_transaction():
+            await insert_documents(session=session)
 
     #'''
     await asyncio.gather(
         run_twitter(twitterscraper=twitterscraper, manager=_manager),
         run_reddit(redditscraper=redditscraper, manager=manager)
     )
-    #'''
 
-    #await asyncio.gather(
-    #    twitterscraper.scrape(keyword=keyword),
-    #    redditscraper.scrape(keyword=keyword)
-    #)
 
 asyncio.run(main())
 
