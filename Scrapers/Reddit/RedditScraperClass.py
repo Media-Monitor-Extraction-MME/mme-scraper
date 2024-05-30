@@ -222,6 +222,7 @@ class RedditScraper(IScraper):
                             return Array.from(rootComments).map(getCommentData);
                         })()
                     """)
+
             comments_data = await process_comments(comment_data, post['post_id'])
             #comments = [comment for sublist in comments_data for comment in sublist if comment is not None]
 
@@ -242,37 +243,18 @@ class RedditScraper(IScraper):
             return comments
 
         comments = await launch_contexts(browser, posts)
-
                 
         return comments
-    
-    async def scrape(self, frequency, keywords):
-        ...
-    
+      
+    async def scrape(self, keyword):
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(args=['--start-maximized'], headless=False)
 
-async def main():
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(args=['--start-maximized'], headless=False)
-        scraper = RedditScraper(query="Justin Bieber")
-
-        start_time = time.time()
-
-        subreddits = await scraper.subreddit_scrape(browser)
-        print("Subreddits:", subreddits)
-
-        posts = await scraper.post_scrape(forums=subreddits, browser=browser)
-        print("Posts:", posts)
-
-        if posts:
-            comments = await scraper.content_scrape(posts=posts, browser=browser)
-            print("Comments:", comments)
-
-        await browser.close()
-
-        end_time = time.time()
-        execution_time = end_time - start_time
-        posts_length = len(posts)
-        print(f'Execution time: {execution_time} seconds for {posts_length} posts')
-
-if __name__ == "__main__":
-    asyncio.run(main())
+            self.query = keyword
+            
+            subreddits = await self.subreddit_scrape(browser=browser)
+            posts = await self.post_scrape(forums=subreddits, browser=browser)
+            if posts:
+                comments = await self.content_scrape(posts=posts, browser=browser)
+            
+            return posts, comments

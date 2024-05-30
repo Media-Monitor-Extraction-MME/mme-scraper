@@ -13,13 +13,17 @@ from Scrapers.Twitter.TwitterScraperClass import TwitterScraper
 from Scrapers.Twitter.account_data import *
 
 from playwright.async_api import async_playwright
+from dotenv import load_dotenv
+load_dotenv()
 
 from unittest.mock import patch
 import unittest
 
 import logging
 import asyncio
+
 import time
+import numpy as np
 import json
 
 async def run_reddit(redditscraper):
@@ -33,6 +37,7 @@ async def run_reddit(redditscraper):
         posts = await redditscraper.post_scrape(forums=subreddits, browser=browser)
 
         if posts:
+
             comments = await redditscraper.content_scrape(posts=posts, browser=browser)
     
         posts_len = len(posts)
@@ -63,13 +68,12 @@ async def run_twitter(twitterscraper):
         await browser.close()
         
         return twitterdata
-    
-
 
 async def main():
     username = None
     password = None
     keyword = "Nicki Minaj"
+
 
     try:
         with open('Scrapers/Twitter/account_data/accounts.txt', 'r') as file:
@@ -110,6 +114,13 @@ async def main():
     async with await manager.client.start_session() as session:
         async with session.start_transaction():
             await insert_documents(session=session)
+
+    #'''
+    await asyncio.gather(
+        run_twitter(twitterscraper=twitterscraper, manager=_manager),
+        run_reddit(redditscraper=redditscraper, manager=manager)
+    )
+
 
 asyncio.run(main())
 

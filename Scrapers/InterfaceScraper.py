@@ -7,5 +7,5 @@ from abc import ABC, abstractmethod
 
 class IScraper(ABC):
     @abstractmethod
-    def scrape(frequency, keywords):
+    def scrape(keyword: str):
         pass
