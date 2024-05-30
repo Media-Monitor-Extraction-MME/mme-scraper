@@ -6,7 +6,7 @@ import sys, os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from ..DB.InterfaceDBManager import IDBManager
-from IRepos import *
+from .IRepos import *
 
 from typing import Any
 
