@@ -62,7 +62,7 @@ class DBManager(IDBManager):
 
     async def insert_documents(self, collection: str, newdoc: list[dict], session=None) -> List[Any]:
         """
-        Insert new documents and return their IDs.
+        Insert new documents and return their IDs. Updates duplicates if they exist.
         """
         id_list = []
         for doc in newdoc:
@@ -73,15 +73,12 @@ class DBManager(IDBManager):
             "_id" : {"$in" : id_list}
         },session=session)
 
-        r_list = await updateResults.to_list(100)
         duplicteIds = await updateResults.distinct("_id")
 
         ids_to_remove = set(duplicteIds)
         newdoc_filtered = [d for d in newdoc if d['_id'] not in ids_to_remove]
         newdoc_updates = [d for d in newdoc if d['_id'] in ids_to_remove]
 
-        # for updates in duplicteIds:
-        #     newdoc.remove(updates)
         result = await self.db[collection].insert_many(newdoc_filtered, session=session)
         updates_count = 0
         for doc in newdoc_updates:
