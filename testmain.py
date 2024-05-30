@@ -6,9 +6,7 @@ Entry point for testing cases.
 from General.DB.DataBaseManager import DBManager
 #from General.ScraperService import ScraperService
 from General.Platforms import _Platforms
-#from General.RepoStructure.CommentRepo import CommentRepo
-#from General.RepoStructure.CommunityRepo import CommunityRepo
-#from General.RepoStructure.PostRepo import PostRepo
+from General.RepoStructure.Repos import *
 
 from Scrapers.Reddit.RedditScraperClass import RedditScraper
 from Scrapers.Twitter.TwitterScraperClass import TwitterScraper

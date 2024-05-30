@@ -1,9 +1,10 @@
 '''
-ICommentRepository interface
+Contains all interfaces for the repo structure
 '''
 
 #Imports
 from abc import ABC, abstractmethod
+
 
 class ICommentRepository(ABC):
     @abstractmethod
@@ -22,10 +23,20 @@ class ICommentRepository(ABC):
     def search_comment(document):
         pass
 
+
+class IPostRepository(ABC):
     @abstractmethod
-    def get_comment_by_id(document):
+    def add_post(document):
         pass
 
     @abstractmethod
-    def get_comment_id(document):
+    def remove_post(document):
+        pass
+
+    @abstractmethod
+    def update_post(document):
+        pass
+
+    @abstractmethod
+    def search_post(document):
         pass

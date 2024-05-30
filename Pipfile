@@ -10,7 +10,7 @@ playwright = "*"
 http-request-randomizer = "*"
 motor = "*"
 python-dotenv = "*"
-numpy = "*"
+requests = ">=2.32.0"
 
 [dev-packages]
 

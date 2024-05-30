@@ -230,6 +230,7 @@ class TwitterScraper(IScraper):
 						try:
 							await page.goto(link)
 							num_code = (re.match(r'\/[A-Za-z0-9_]+\/status\/[0-9]+$', link)).group(1)
+							url = (re.match(r"/[a-zA-Z0-9_]+/status/\d+", link))
 
 
 							'''
@@ -310,15 +311,13 @@ class TwitterScraper(IScraper):
 							objectId = ObjectId(hex_string)
 
 							tweet = Tweet(_id=objectId,
-											link=link, 
-											content=tweet_content_with_emoji, 
-											date=tweet_date, 
-											likes=tweet_likes, 
-											reposts=tweet_reposts, 
-											quotes=tweet_quotes, 
-											bookmarks=tweet_bookmarks, 
+											url=url, 
+											title=tweet_content_with_emoji, 
+											time=tweet_date, 
+											upvotes=tweet_likes,
 											views=tweet_views, 
-											comments=tweet_comments)
+											reposts=tweet_reposts, 
+											)
 							
 							return tweet.to_doc() 
 						except Exception as e:
