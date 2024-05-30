@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from motor.motor_asyncio import AsyncIOMotorClient
 import certifi
 import os
+from pymongo import UpdateMany
 
 load_dotenv()
 MONGODB_URI = os.getenv('MONGODB_URI')
@@ -63,6 +64,27 @@ class DBManager(IDBManager):
         """
         Insert new documents and return their IDs.
         """
-        result = await self.db[collection].insert_many(newdoc, session=session)
+        id_list = []
+        for doc in newdoc:
+            id = doc["_id"]
+            id_list.append(id)
+            
+        updateResults = self.db[collection].find({
+            "_id" : {"$in" : id_list}
+        },session=session)
+
+        r_list = await updateResults.to_list(100)
+        duplicteIds = await updateResults.distinct("_id")
+
+        ids_to_remove = set(duplicteIds)
+        newdoc_filtered = [d for d in newdoc if d['_id'] not in ids_to_remove]
+        newdoc_updates = [d for d in newdoc if d['_id'] in ids_to_remove]
+
+        # for updates in duplicteIds:
+        #     newdoc.remove(updates)
+        result = await self.db[collection].insert_many(newdoc_filtered, session=session)
+        result2 = await self.db[collection].update_many({'_id': { '$gt': ""} }, newdoc_updates, session=session)
         print(f"{len(result.inserted_ids)} documents inserted.")
+        print(f"{len(result2.upserted_id)} documents updated.")
+
         return result.inserted_ids

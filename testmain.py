@@ -41,9 +41,11 @@ async def run_reddit(redditscraper):
             comments = await redditscraper.content_scrape(posts=posts, browser=browser)
     
         posts_len = len(posts)
+        comments_len = len(comments)
         end_time = time.time()
         total_time = end_time - start_time
         print(f'Reddit: {posts_len} posts scraped in {total_time} seconds.')
+        print(f'RedditL {comments_len} comments scraped in {total_time} seconds.')
         
         await browser.close()
 
@@ -72,7 +74,7 @@ async def run_twitter(twitterscraper):
 async def main():
     username = None
     password = None
-    keyword = "Nicki Minaj"
+    keyword = "Trump"
 
 
     try:
@@ -90,25 +92,25 @@ async def main():
     redditscraper = RedditScraper(query=keyword)
 
     # scrape the data
-    twitter_data, reddit_data = await asyncio.gather(
-        run_twitter(twitterscraper=twitterscraper),
-        run_reddit(redditscraper=redditscraper)
+    twitter_data = await asyncio.gather(
+        run_twitter(twitterscraper=twitterscraper)
+        #run_reddit(redditscraper=redditscraper)
     )
-    reddit_posts = reddit_data[0]
-    reddit_comments = reddit_data[1]
+    #reddit_posts = reddit_data[0]
+    #reddit_comments = reddit_data[1]
+    twitter_posts = twitter_data[0]
     
     # upload data
     manager = DBManager(db_name='scraped_data')
     async def insert_documents(session):
             
-        await manager.insert_documents("redditposts", reddit_posts, session=session)
-        await manager.insert_documents("redditcomments", reddit_comments, session=session)
-        await manager.insert_documents("twitterdata", twitter_data, session=session)
+        #await manager.insert_documents("redditposts", reddit_posts, session=session)
+        #await manager.insert_documents("redditcomments", reddit_comments, session=session)
+        await manager.insert_documents("twitterdata", twitter_posts, session=session)
     
     async with await manager.client.start_session() as session:
         async with session.start_transaction():
             await insert_documents(session=session)
-
 
 
 asyncio.run(main())
