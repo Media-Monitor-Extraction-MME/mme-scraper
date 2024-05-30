@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from motor.motor_asyncio import AsyncIOMotorClient
 import certifi
 import os
-from pymongo import UpdateMany
+from pymongo import UpdateOne
 
 load_dotenv()
 MONGODB_URI = os.getenv('MONGODB_URI')
@@ -83,8 +83,13 @@ class DBManager(IDBManager):
         # for updates in duplicteIds:
         #     newdoc.remove(updates)
         result = await self.db[collection].insert_many(newdoc_filtered, session=session)
-        result2 = await self.db[collection].update_many({'_id': { '$gt': ""} }, newdoc_updates, session=session)
+        updates_count = 0
+        for doc in newdoc_updates:
+            filter = {'_id' : doc['_id']}
+            new_values = {'$set': doc}
+            await self.db[collection].update_one(filter, new_values, session=session)
+            updates_count += 1
         print(f"{len(result.inserted_ids)} documents inserted.")
-        print(f"{len(result2.upserted_id)} documents updated.")
+        print(f"{updates_count} documents updated.")
 
         return result.inserted_ids
