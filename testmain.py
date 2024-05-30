@@ -96,16 +96,10 @@ async def main():
     )
     reddit_posts = reddit_data[0]
     reddit_comments = reddit_data[1]
-    # Save twitter_data to a JSON file
-   # with open('twitter_data.json', 'w') as file:
-    #    json.dump(twitter_data, file)
     
     # upload data
     manager = DBManager(db_name='scraped_data')
     async def insert_documents(session):
-        #DEBUG
-        #with open('twitter_data.json') as f:
-         #   twitter_data = json.load(f)
             
         await manager.insert_documents("redditposts", reddit_posts, session=session)
         await manager.insert_documents("redditcomments", reddit_comments, session=session)
@@ -115,11 +109,6 @@ async def main():
         async with session.start_transaction():
             await insert_documents(session=session)
 
-    #'''
-    await asyncio.gather(
-        run_twitter(twitterscraper=twitterscraper, manager=_manager),
-        run_reddit(redditscraper=redditscraper, manager=manager)
-    )
 
 
 asyncio.run(main())
