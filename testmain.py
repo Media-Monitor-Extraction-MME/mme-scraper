@@ -26,6 +26,7 @@ import time
 import numpy as np
 import json
 
+
 async def run_reddit(redditscraper):
     async with async_playwright() as p:
         start_time = time.time()
@@ -56,6 +57,7 @@ async def run_twitter(twitterscraper):
         start_time = time.time()
 
         browser = await p.chromium.launch(args=['--start-maximized'], headless=False)
+        print(browser)
 
         page = await twitterscraper.login_account(browser)
         if page is None:
@@ -75,6 +77,8 @@ async def main():
     username = None
     password = None
     keyword = "Trump"
+    keywords = ['Nicki Minaj', 'Drake', 'Dua Lipa', 'Justin Bieber', 'Andrew Tate']
+
 
 
     try:
@@ -89,16 +93,31 @@ async def main():
 
     # init scrapers
     twitterscraper = TwitterScraper(link_gather_account_username=username, link_gather_account_password=password, keyword=keyword)
-    redditscraper = RedditScraper(query=keyword)
+    #redditscraper = RedditScraper(query=keyword)
 
     # scrape the data
-    twitter_data = await asyncio.gather(
-        run_twitter(twitterscraper=twitterscraper)
+    #twitter_data = await asyncio.gather(
+    #    run_twitter(twitterscraper=twitterscraper)
         #run_reddit(redditscraper=redditscraper)
-    )
+    #)
+    
+    #twitter_data = await asyncio.gather(
+    #    twitterscraper.scrape()
+    #)
+
+    #Twitter testing for multiple keywords:
+    twitter_tasks = []
+    for keyword in keywords:
+        twitterscraper = TwitterScraper(username, password, keyword)
+        twitter_tasks.append(twitterscraper.scrape())
+
+    all_twitter_data = await asyncio.gather(*twitter_tasks)
+
+    all_twitter_posts = [twitter_data for twitter_data in all_twitter_data]
+
     #reddit_posts = reddit_data[0]
     #reddit_comments = reddit_data[1]
-    twitter_posts = twitter_data[0]
+    #twitter_posts = twitter_data[0]
     
     # upload data
     manager = DBManager(db_name='scraped_data')
@@ -106,7 +125,8 @@ async def main():
             
         #await manager.insert_documents("redditposts", reddit_posts, session=session)
         #await manager.insert_documents("redditcomments", reddit_comments, session=session)
-        await manager.insert_documents("twitterdata", twitter_posts, session=session)
+        for twitter_posts in all_twitter_posts:
+            await manager.insert_documents("twitterdata", twitter_posts, session=session)
     
     async with await manager.client.start_session() as session:
         async with session.start_transaction():

@@ -53,18 +53,24 @@ class TwitterScraper(IScraper):
 
 				name_selector = 'input[type="text"][name="text"]'
 				await page.type(name_selector, self.link_gather_account_username, delay=150)
+				await asyncio.sleep(2)
 
 				button_selector = "text='Next'"
 				await page.click(button_selector)
+				await asyncio.sleep(2)
 
 				password_selector = 'input[name="password"]'
 				await page.type(password_selector, self.link_gather_account_password, delay=150)
+				await asyncio.sleep(2)
 
 				login_btn_selector = '[data-testid="LoginForm_Login_Button"]'				
 				await page.click(login_btn_selector)
 
-				search_box_selector = '[data-testid="SearchBox_Search_Input"]'
-				await asyncio.wait_for(page.wait_for_selector(search_box_selector), timeout=5)
+				await page.wait_for_load_state()
+				await asyncio.sleep(5)
+
+				#search_box_selector = '[data-testid="SearchBox_Search_Input"]'
+				#await asyncio.wait_for(page.wait_for_selector(search_box_selector), timeout=10)
 				logging.info("Login successful")
 				return page
 
@@ -355,17 +361,22 @@ class TwitterScraper(IScraper):
 
 		return results
 	
-	async def scrape(self, keyword):
+	async def scrape(self):
 		async with async_playwright() as p:
-			browser = p.chromium.launch(args=['--start-maximized'], headless=False)
+			start_time = time.time()
+			browser = await p.chromium.launch(args=['--start-maximized'], headless=False)
 
-			self.keyword = keyword
-
-			page = self.login_account(browser=browser)
+			page = await self.login_account(browser=browser)
+			print(page)
 			if page is None:
 				logging.error("Page is none")
 			links = await self.link_gatherer(page=page)
 			twitterdata = await self.scraper(browser=browser, links=links)
+			links_len = len(links)
+			end_time = time.time()
+			total_time = end_time - start_time
+			print(f'Twitter: {links_len} tweets scraped in {total_time} seconds.')
+			await browser.close()
 
 		return twitterdata
 			
