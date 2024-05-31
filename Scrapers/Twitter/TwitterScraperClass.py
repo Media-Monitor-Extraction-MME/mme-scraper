@@ -321,7 +321,8 @@ class TwitterScraper(IScraper):
 							tweet = Tweet(
 										_id=objectId,
 										url=url, 
-										title=tweet_content_with_emoji, 
+										title='',
+										description=tweet_content_with_emoji, 
 										time=tweet_date, 
 										upvotes=tweet_likes,
 										views=tweet_views, 
@@ -341,6 +342,7 @@ class TwitterScraper(IScraper):
 								_id=objectId,
 								url=url,
 								title='',
+								description='',
 								time='',
 								upvotes='',
 								views='',

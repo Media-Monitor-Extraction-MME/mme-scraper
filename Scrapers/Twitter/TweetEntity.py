@@ -4,10 +4,11 @@ Tweets need to be morphed into this structure to enforce correct data storage
 '''
 
 class Tweet:
-    def __init__(self, _id: str, url: str, title: str, time: str, upvotes: str, views: str, reposts: str, origin: str ="Twitter"):
+    def __init__(self, _id: str, url: str, title: str, description: str, time: str, upvotes: str, views: str, reposts: str, origin: str ="Twitter"):
         self._id = _id
         self.url = url
         self.title = title
+        self.description = description
         self.time = time
         self.upvotes = upvotes
         self.views = views
@@ -19,6 +20,7 @@ class Tweet:
             "_id": self._id,
             "url": self.url,
             "title": self.title,
+            "description": self.description,
             "time": self.time,
             "upvotes": self.upvotes,
             "views": self.views,
