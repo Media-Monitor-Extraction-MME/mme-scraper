@@ -23,7 +23,6 @@ import logging
 import asyncio
 
 import time
-import numpy as np
 import json
 
 
