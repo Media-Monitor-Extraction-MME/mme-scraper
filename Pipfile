@@ -11,6 +11,7 @@ http-request-randomizer = "*"
 motor = "*"
 python-dotenv = "*"
 requests = ">=2.32.0"
+pytest = "*"
 
 [dev-packages]
 
