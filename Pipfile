@@ -12,6 +12,7 @@ motor = "*"
 python-dotenv = "*"
 requests = ">=2.32.0"
 pytest = "*"
+pytest-asyncio = "*"
 
 [dev-packages]
 
