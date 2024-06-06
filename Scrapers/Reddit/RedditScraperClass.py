@@ -321,7 +321,6 @@ class RedditScraper(IScraper):
             #get description
             await page.wait_for_load_state('load')
             comment_data = await page.evaluate("""
-<<<<<<< Updated upstream
                         (
                             function fetchComments() {
                             const allComments = [];
@@ -355,7 +354,6 @@ class RedditScraper(IScraper):
 
                             return allComments;
                         })();
-=======
                         (function fetchComments() {
                             function getCommentData(commentElement, parent_id =git  null) {
                                 var id = commentElement.getAttribute("data-fullname");
@@ -377,9 +375,10 @@ class RedditScraper(IScraper):
                     var rootComments = document.querySelectorAll("div.commentarea > .sitetable > .comment");
                     return Array.from(rootComments).map(comment => getCommentData(comment));
                     })()
->>>>>>> Stashed changes
                     """)
-
+            
+            description = await page.query_selector('.usertext.usertext-body')
+            posts['description'] = await description.inner_text() if description else None
             comments_data = await process_comments(comment_data, post['_id'])
             comments_data = await process_comments(comment_data, post['_id'])
             #comments = [comment for sublist in comments_data for comment in sublist if comment is not None]
