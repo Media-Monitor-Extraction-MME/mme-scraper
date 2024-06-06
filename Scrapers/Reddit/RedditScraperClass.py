@@ -192,12 +192,13 @@ class RedditScraper(IScraper):
                 #comment_id = await generate_id(comment['fullname'])
                 processed_comment = {
                     #'_id': comment_id,
+                    'commentID': comment['id'],
                     'postID': post_id,
-                    #'parentId': parent_id,
+                    'parentId': comment['parentId'],
                     'comment': comment['comment'],
                     'score':  int(comment['score'].split()[0]) if comment['score'] else 0, # the score we get is a string with the score and the word 'points'
                     'level' : level,
-                    'children':[]
+                    'childrenIDs':comment['childrenIds']
                 }
                 if 'children' in comment and comment['children']:
                     processed_comment['children'] = await process_comments(comment['children'], post_id, level + 1)
@@ -209,18 +210,37 @@ class RedditScraper(IScraper):
             await page.wait_for_load_state('load')
             comment_data = await page.evaluate("""
                         (function fetchComments() {
-                            function getCommentData(commentElement) {
-                                var comment = commentElement.querySelector(".usertext")?.innerText;
-                                var score = commentElement.querySelector(".score")?.innerText;
-                                var fullname = commentElement.getAttribute("data-fullname");
-                                var children = Array.from(commentElement.querySelectorAll(":scope > .child > .listing > .comment"))
-                                    .map(getCommentData);
-                                return {comment, score, fullname, children};
+                            const allComments = [];
+
+                            function getCommentData(commentElement, parentId = null) {
+                                const data = {
+                                    comment: commentElement.querySelector(".usertext")?.innerText,
+                                    score: commentElement.querySelector(".score")?.innerText,
+                                    fullname: commentElement.getAttribute("data-fullname"),
+                                    id: commentElement.getAttribute("id"),
+                                    parentId: parentId,
+                                    childrenIds: Array.from(commentElement.querySelectorAll(":scope > .child > .listing > .comment"))
+                                        .map(child => child.getAttribute("data-fullname"))
+                                };
+
+                                // extract all other attributes
+                                Array.from(commentElement.attributes).forEach(attr => {
+                                    data[attr.name] = attr.value;
+                                });
+
+                                // store the comment data in the allComments array
+                                allComments.push(data);
+
+                                // recursively process children comments
+                                const childComments = commentElement.querySelectorAll(":scope > .child > .listing > .comment");
+                                childComments.forEach(child => getCommentData(child, data.fullname));
                             }
 
-                            var rootComments = document.querySelectorAll("div.commentarea > .sitetable > .comment");
-                            return Array.from(rootComments).map(getCommentData);
-                        })()
+                            const rootComments = document.querySelectorAll("div.commentarea > .sitetable > .comment");
+                            rootComments.forEach(comment => getCommentData(comment));
+
+                            return allComments;
+                        })();
                     """)
 
             comments_data = await process_comments(comment_data, post['post_id'])
