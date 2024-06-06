@@ -11,14 +11,18 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from playwright.async_api import async_playwright
 from bson import ObjectId
-from binascii import hexlify, unhexlify
+import hashlib
+
+import hashlib
+
 
 from InterfaceScraper import IScraper
 
 import re
 import asyncio
 import datetime
-import time
+
+
 
 class RedditScraper(IScraper):
     
@@ -87,6 +91,49 @@ class RedditScraper(IScraper):
         
         return filtered_subreddits
 
+    async def generate_id(self, string: str) -> str:
+        """
+        Generates a unique ID from a string.
+        
+        Args:
+            @string: The string to generate an ID from.
+        
+        Returns:
+            (str): The generated ID.
+        """
+        # Hash the input string using SHA-1
+        hash_object = hashlib.sha1(string.encode())
+        
+        # Take the first 12 bytes of the hash
+        objectid_hex = hash_object.hexdigest()[:24]
+        
+        # Create an ObjectId from the hex string
+        object_id = ObjectId(objectid_hex)
+        
+        return object_id
+    
+
+    async def generate_id(self, string: str) -> str:
+        """
+        Generates a unique ID from a string.
+        
+        Args:
+            @string: The string to generate an ID from.
+        
+        Returns:
+            (str): The generated ID.
+        """
+        # Hash the input string using SHA-1
+        hash_object = hashlib.sha1(string.encode())
+        
+        # Take the first 12 bytes of the hash
+        objectid_hex = hash_object.hexdigest()[:24]
+        
+        # Create an ObjectId from the hex string
+        object_id = ObjectId(objectid_hex)
+        
+        return object_id
+    
     async def post_scrape(self, forums, browser) -> dict:
         """
         Scrapes the posts in a subreddit.
@@ -100,22 +147,47 @@ class RedditScraper(IScraper):
         """
         #Helper Function
         async def map_post(post, attributes):
+            """
+            Maps the attributes of a post to the post dictionary.
+            
+            Args:
+                @post: The post dictionary.
+                @attributes: The attributes of the post element.
+            
+            Returns:
+                A dictionary containing the mapped post data.
+            """
+            """
+            Maps the attributes of a post to the post dictionary.
+            
+            Args:
+                @post: The post dictionary.
+                @attributes: The attributes of the post element.
+            
+            Returns:
+                A dictionary containing the mapped post data.
+            """
             mapping = {
-                'data-fullname': 'post_id',
-                'data-subreddit-prefixed': 'subreddit',
-                'data-timestamp': 'timestamp',
-                'data-url': 'new_url',
-                'data-permalink': 'perma_link',
-                'data-score': 'upvotes',
+                'data-fullname': '_id',
+                'data-timestamp': 'time',
+                'data-permalink': 'url',
+                'data-score': 'upvotes'
+                'data-fullname': '_id',
+                'data-timestamp': 'time',
+                'data-permalink': 'url',
+                'data-score': 'upvotes'
             }
             
             ## check if ad and skips if true
-            ## attribute contains this field (data-promoted) so we can check if it's an ad
+            ## attribute contains this field (data-promoted) so we can check if it's an ad -> doesn't work.. ?
+            ## ads usually start with u/ instead of r/
+            ## attribute contains this field (data-promoted) so we can check if it's an ad -> doesn't work.. ?
+            ## ads usually start with u/ instead of r/
             ## attributes also contain data-nsfw for nsfw posts
-            ## need to get rid of the ugly break -> bad practice
             for attr in attributes:
                 if attr['name'] == 'data-promoted' and attr['value'] == 'true':
-                    continue
+                    return None
+                    return None
                 if attr['name'] in mapping:
                     post[mapping[attr['name']]] = attr['value']
             
@@ -123,22 +195,52 @@ class RedditScraper(IScraper):
                 timestamp_seconds = int(post['timestamp']) / 1000
                 dt = datetime.datetime.fromtimestamp(timestamp_seconds)
                 post['timestamp'] = dt
+                
+            if post['_id']:
+                post['_id'] = await self.generate_id(post['_id'])
+                
+            if post['_id']:
+                post['_id'] = await self.generate_id(post['_id'])
             
             return post
         
         #Helper Function
         async def process_element(page, element):
-        
+            """
+            Processes a post element and extracts its data.
+           
+            Args:
+                @page: The Playwright page object.
+                @element: The post element.
+            
+            Returns:
+                A dictionary containing the post data. 
+            """
+            """
+            Processes a post element and extracts its data.
+           
+            Args:
+                @page: The Playwright page object.
+                @element: The post element.
+            
+            Returns:
+                A dictionary containing the post data. 
+            """
             post = {
-                'post_id':None,
-                'origin': 'Reddit',
-                'subreddit': None,
+                '_id':None,
+                'url': None,
+                '_id':None,
+                'url': None,
                 'title': '',
-                'upvotes': None,
                 'description': '',
-                'new_url': None,
-                'perma_link': None,
-                'timestamp': None,
+                'time': None,
+                'upvotes': None,
+                'views': None,
+                'reposts': None,
+                'time': None,
+                'upvotes': None,
+                'views': None,
+                'reposts': None,
             }
             attributes = await element.evaluate('el => { return Array.from(el.attributes).map(attr => ({name: attr.name, value: attr.value})); }')
             mapped_post = await map_post(post, attributes)
@@ -146,7 +248,13 @@ class RedditScraper(IScraper):
                 post.update(mapped_post)
                 data_fullname = next(attr['value'] for attr in attributes if attr['name'] == 'data-fullname')
                 post['title'] = await (await page.query_selector(f"div[data-fullname='{data_fullname}'] > div.entry.unvoted > div.top-matter > p.title > a" )).inner_text()
+                post['description'] = await (await page.query_selector(f"#form-{data_fullname} > div.usertext-body")).inner_text()
+                post['description'] = await (await page.query_selector(f"#form-{data_fullname} > div.usertext-body")).inner_text()
                 return post
+            else:
+                return None
+            else:
+                return None
         
         #Initialize every subreddit in batches of 3
         async def launch_contexts(browser, forums):
@@ -188,6 +296,8 @@ class RedditScraper(IScraper):
         async def process_comments(comments, post_id, level=0):
             # Recursively process comments and generate unique IDs for each comment
             processed_comments = []
+            
+            
             for comment in comments:
                 #comment_id = await generate_id(comment['fullname'])
                 processed_comment = {
@@ -207,9 +317,13 @@ class RedditScraper(IScraper):
         
         async def load_pages(page, post):
             await page.goto(f"https://old.reddit.com/{post['perma_link']}", wait_until='domcontentloaded')
+            #get description
+            #get description
             await page.wait_for_load_state('load')
             comment_data = await page.evaluate("""
-                        (function fetchComments() {
+<<<<<<< Updated upstream
+                        (
+                            function fetchComments() {
                             const allComments = [];
 
                             function getCommentData(commentElement, parentId = null) {
@@ -241,9 +355,33 @@ class RedditScraper(IScraper):
 
                             return allComments;
                         })();
+=======
+                        (function fetchComments() {
+                            function getCommentData(commentElement, parent_id =git  null) {
+                                var id = commentElement.getAttribute("data-fullname");
+                            function getCommentData(commentElement, parent_id =git  null) {
+                                var id = commentElement.getAttribute("data-fullname");
+                                var comment = commentElement.querySelector(".usertext")?.innerText;
+                                var score = commentElement.querySelector(".score")?.innerText;
+                                var childrenElements = Array.from(commentElement.querySelectorAll(":scope > .child > .listing > .comment"));
+                                var children_ids = childrenElements.map(child => child.querySelector(".fullname")?.innerText);
+                                var children = childrenElements.map(child => getCommentData(child, id));
+                                return {id, comment, score, fullname, parent_id, children_ids, children};
+                        }
+                                var childrenElements = Array.from(commentElement.querySelectorAll(":scope > .child > .listing > .comment"));
+                                var children_ids = childrenElements.map(child => child.querySelector(".fullname")?.innerText);
+                                var children = childrenElements.map(child => getCommentData(child, id));
+                                return {id, comment, score, fullname, parent_id, children_ids, children};
+                        }
+
+                    var rootComments = document.querySelectorAll("div.commentarea > .sitetable > .comment");
+                    return Array.from(rootComments).map(comment => getCommentData(comment));
+                    })()
+>>>>>>> Stashed changes
                     """)
 
-            comments_data = await process_comments(comment_data, post['post_id'])
+            comments_data = await process_comments(comment_data, post['_id'])
+            comments_data = await process_comments(comment_data, post['_id'])
             #comments = [comment for sublist in comments_data for comment in sublist if comment is not None]
 
             return comments_data  
