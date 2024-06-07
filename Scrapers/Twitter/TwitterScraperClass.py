@@ -16,32 +16,17 @@ import re
 from bson import ObjectId
 import logging
 
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 class TwitterScraper(IScraper):
 	def __init__(self, link_gather_account_username, link_gather_account_password, keyword):
 		self.link_gather_account_username = link_gather_account_username
 		self.link_gather_account_password = link_gather_account_password
 		self.keyword = keyword
-		logging.basicConfig(level=logging.INFO)
 
-	link_gather_account = Account
-	link = None
-	keyword = str
 
-	async def login_account(self, browser, retry_count=0):
-		'''
-		account_location = 'account_data/accounts.txt'
-		try:
-			with open(account_location, 'r') as file:
-				last_line = file.readlines()[-1]
-			
-			#account = last_line.split(', ')
-			#username = account[1].strip()
-			#password = account[3].strip()
-		except FileNotFoundError:
-			logging.error("Account file not found")
-			return None
-		'''
+	async def login_account(self, browser):
 		context = None
 
 		try:
@@ -71,8 +56,6 @@ class TwitterScraper(IScraper):
 				await page.wait_for_load_state()
 				await asyncio.sleep(5)
 
-				#search_box_selector = '[data-testid="SearchBox_Search_Input"]'
-				#await asyncio.wait_for(page.wait_for_selector(search_box_selector), timeout=10)
 				logging.info("Login successful")
 				return page
 
@@ -86,113 +69,48 @@ class TwitterScraper(IScraper):
 		search_query = f"{self.keyword} min_faves:500 since:2024-01-01"
 		await page.type(search_selector_id, search_query, delay=150)
 		await page.keyboard.press('Enter')
-			
 
-		#Allows for filtering
-		# advanced_search = 'text="Advanced search"'
-		# await page.click(advanced_search)
-		# await asyncio.sleep(1)
+		logger.debug("Entered search query : %s", search_query)
 
-		# keyword_selector = 'input[name="allOfTheseWords"]'
-		# await page.type(keyword_selector, self.keyword, delay=150)
-		# await asyncio.sleep(2)
-
-		#Filtering tweets from 2024 onwards
-		# fromMonth_selector = '#SELECTOR_16'
-		# fromDay_selector = '#SELECTOR_17'
-		# fromYear_selector = '#SELECTOR_18'
-
-		# await page.select_option(fromMonth_selector, 'January')
-		# await page.select_option(fromDay_selector, '1')
-		# await page.select_option(fromYear_selector, '2024')
-			
-			#Filtering based on hashtags
-		# 
-		# keyword = f"#{keyword}"
-		# hashtag_selector = 'input[name="theseHashtags"]'
-		# await page.type(hashtag_selector, keyword, delay=150)
-		# 
-
-		#Filtering based on likes
-		# likes = "500"
-		# min_likes = 'input[name="minLikes"]'    
-		# await page.type(min_likes, likes, delay=150)
-		# await asyncio.sleep(1)
-
-		#Filtering based on replies
-		...
-
-		#Filtering based on reposts/retweets
-		...
-
-		#Maybe more filtering (enabling/disabling links/replies)
-
-		# advanced_search_button = 'text="Search"'
-		# await page.click(advanced_search_button)
-		# await asyncio.sleep(1)
-
-		cookies_button = page.get_by_text("Refuse non-essential cookies")
+		cookies_button = await page.get_by_text("Refuse non-essential cookies")
 		if cookies_button:
 			await cookies_button.click()
+			logger.debug("Clicked on cookie button")
 		else:
-			return
+			logger.debug("No cookie button found")
 
 		_prev_height = -1
 		_max_scrolls = 10
 		_scroll_count = 0
 		while _scroll_count < _max_scrolls:
-			# Execute JavaScript to scroll to the bottom of the page
 			await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-			# Wait for new content to load (change this value as needed)
 			await page.wait_for_timeout(100)
 
 			anchor_tags = await page.query_selector_all('a')
+			logger.debug("Found %d anchor tags", len(anchor_tags))
 
 			for link_element in anchor_tags:
 				href = await link_element.get_attribute('href')
 				if href and re.match(r'\/[A-Za-z0-9_]+\/status\/[0-9]+$', href):
 					links.append("https://twitter.com" + href)
+			
+			logger.debug("Links collected so far: %s", links)
+
 			new_height = await page.evaluate("document.body.scrollHeight")
 			if new_height == _prev_height:
+				logger.debug("Reached the bottom of page, or no new content found")
 				break
 			_prev_height = new_height
 			_scroll_count += 1
-			print(f"Scroll count: {_scroll_count}")
-
+			logger.debug("Scroll count: %d", _scroll_count)
 		await asyncio.sleep(5)
-		#await page.wait_for_load_stage()
-
-		'''
-		link_selectors = await page.locator('.css-175oi2r').get_by_role('link').all()
-		print(link_selectors)
-
-		article_element = await page.get_by_role('article').all()
-		print(article_element)
-
-		for link_element in link_selectors:
-			href = await link_element.get_attribute('href')
-			if href and re.match(r'\/[A-Za-z0-9_]+\/status\/[0-9]+$', href):
-				links.append("https://twitter.com" + href)
-				if len(links) >= 50:  # Break after collecting 20 valid links
-					break
-			await asyncio.sleep(1)
-		'''
-
-		#Logging out
-		'''
-		account_selector_testid = '[data-testid="SideNav_AccountSwitcher_Button"]'
-		await page.click(account_selector_testid)
-
-		asyncio.sleep(2)
-
-		logout_testid = '[data-testid="AccountSwitcher_Logout_Button"]'
-		await page.click(logout_testid)
-		'''
 
 		await page.goto('https://twitter.com/logout')
+		logger.debug("Navigated to logout")
 		await page.close()
+		logger.debug("Page closed")
 			
-		print(links)	
+		logger.debug("Final links collected: %s", links)	
 		return list(set(links))
 
 	
