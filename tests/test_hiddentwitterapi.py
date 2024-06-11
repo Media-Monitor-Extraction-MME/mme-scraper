@@ -2,7 +2,7 @@ import pytest
 import pytest_asyncio
 import asyncio
 from unittest.mock import AsyncMock, patch
-import aiohttp
+# import aiohttp
 from bson import ObjectId
 
 import sys, os
