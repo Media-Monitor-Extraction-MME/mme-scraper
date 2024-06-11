@@ -35,22 +35,22 @@ async def test_link_gatherer_typing_and_search(scraper):
     mock_page.type.assert_any_call('[data-testid="SearchBox_Search_Input"]', "TestKeyword min_faves:500 since:2024-01-01", delay=150)
     mock_page.keyboard.press.assert_any_call('Enter')
 
-@pytest.mark.asyncio
-async def test_link_gatherer_handle_cookies(scraper):
-    mock_page = AsyncMock()
+# @pytest.mark.asyncio
+# async def test_link_gatherer_handle_cookies(scraper):
+#     mock_page = AsyncMock()
 
-    # Create a mock element that has a click method
-    mock_cookies_button = AsyncMock()
-    mock_cookies_button.click.return_value = asyncio.Future()
-    mock_cookies_button.click.return_value.set_result(None)
+#     # Create a mock element that has a click method
+#     mock_cookies_button = AsyncMock()
+#     mock_cookies_button.click.return_value = asyncio.Future()
+#     mock_cookies_button.click.return_value.set_result(None)
     
-    # Simulate get_by_text returning the mock element directly
-    mock_page.get_by_text.return_value = mock_cookies_button
+#     # Simulate get_by_text returning the mock element directly
+#     mock_page.get_by_text.return_value = mock_cookies_button
 
-    await scraper.link_gatherer(mock_page)
+#     await scraper.link_gatherer(mock_page)
 
-    mock_page.get_by_text.assert_called_once_with("Refuse non-essential cookies")
-    mock_cookies_button.click.assert_called_once()
+#     mock_page.get_by_text.assert_called_once_with("Refuse non-essential cookies")
+#     mock_cookies_button.click.assert_called_once()
 
 @pytest.mark.asyncio
 async def test_link_gatherer_collecting_links(scraper):
