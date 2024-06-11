@@ -93,17 +93,17 @@ class TwitterScraper(IScraper):
 			return links
 		
 		_prev_height = -1
-		_max_scrolls = 10
+		_max_scrolls = 20
 		_scroll_count = 0
 		while _scroll_count < _max_scrolls:
 			await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-			await page.wait_for_load_state()
+			await page.wait_for_timeout(1000)
 
 			# anchor_tags = await page.query_selector_all('a')
 			# logger.debug("Found %d anchor tags", len(anchor_tags))
 			# logger.debug(f"Anchor tags: {anchor_tags}")
 			current_links = await extract_links(page)
-			logger.debug("Found %d links", len(current_links))
+			logger.debug("Found links: %s", current_links)
 			for href in current_links:
 					regex = r'https?://(www\.)?x\.com/[A-Za-z0-9_]+/status/[0-9]+$'
 					if href and re.match(regex, href):

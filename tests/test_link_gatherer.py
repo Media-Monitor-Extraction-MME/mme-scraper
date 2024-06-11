@@ -7,14 +7,33 @@ import sys, os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from Scrapers.Twitter.TwitterScraperClass import TwitterScraper
 
-def side_effect_values(values, default):
-    iter_values = iter(values)
-    def _side_effect(*args, **kwargs):
-        try:
-            return next(iter_values)
-        except StopIteration:
-            return default
+def side_effect_values(js_values):
+    print(f"JS VALUES: {js_values}")
+    call_count = {key: 0 for key in js_values}
+    
+    def _side_effect(js_code, *args, **kwargs):
+        js_code_stripped = js_code.strip()
+        print(f"Evaluating JavaScript: {js_code_stripped}")
+        
+        if js_code_stripped in js_values:
+            index = call_count[js_code_stripped]
+            value = js_values[js_code_stripped]
+            
+            # Handle the case where value is a list of lists
+            if isinstance(value, list) and len(value) > 0 and isinstance(value[0], list):
+                result = value[index] if index < len(value) else value[-1]
+                call_count[js_code_stripped] += 1
+                print(f"Returning value: {result}")
+                return result
+            
+            print(f"Returning single value: {value}")
+            return value
+        
+        print(f"No matching JavaScript code found for: {js_code_stripped}")
+        return js_values['default']
+    
     return _side_effect
+
 
 @pytest_asyncio.fixture
 async def scraper():
@@ -55,49 +74,77 @@ async def test_link_gatherer_typing_and_search(scraper):
 @pytest.mark.asyncio
 async def test_link_gatherer_collecting_links(scraper):
     mock_page = AsyncMock()
-    
-    # Ensure get_by_text returns None (no cookies button)
-    mock_page.get_by_text.return_value = None
-    
-    # Mock scrolling behavior
-    mock_page.evaluate.side_effect = side_effect_values([1000, 2000, 3000, 4000], 4000)  # Simulating the page scroll height
-    
-    # Mock the query_selector_all to return a list of mocked elements
-    mock_elements = [AsyncMock() for _ in range(3)]
-    for i, elem in enumerate(mock_elements):
-        elem.get_attribute.return_value = (f'/user/status/{i}')
-    mock_page.query_selector_all.return_value = mock_elements
 
+    # Define the behavior for typing the search query and pressing enter
+    mock_page.type.return_value = asyncio.Future()
+    mock_page.type.return_value.set_result(None)
+    mock_page.keyboard.press.return_value = asyncio.Future()
+    mock_page.keyboard.press.return_value.set_result(None)
+
+    # Define the behavior for scrolling and evaluating the page content
+    scroll_heights = [1000, 2000, 3000, 4000, 4000]  # Simulate reaching the bottom of the page
+    js_extract_links = """
+    const links = document.querySelectorAll('a');
+    const linkArray = Array.from(links).map(link => link.href);
+    return linkArray;
+    """
+    
+    # Set up the side effect for evaluate
+    def side_effect(js_code, *args, **kwargs):
+        js_code_stripped = js_code.strip()
+        if js_code_stripped == "document.body.scrollHeight":
+            return scroll_heights.pop(0)
+        elif js_code_stripped == js_extract_links.strip():
+            return ["https://x.com/user/status/1", "https://x.com/user/status/2", "https://x.com/user/status/3"]
+        return None
+    
+    mock_page.evaluate.side_effect = side_effect
+
+    # Call the function to test
     links = await scraper.link_gatherer(mock_page)
 
-    # Ensure the return is a list and not None
+    # Assertions to ensure the function works as expected
     assert links is not None
     assert isinstance(links, list)
-    assert len(links) == 3
-    assert "https://twitter.com/user/status/0" in links
-    assert "https://twitter.com/user/status/1" in links
-    assert "https://twitter.com/user/status/2" in links
+    assert len(links) == 3  # Expecting 3 unique links
+    assert "https://x.com/user/status/1" in links
+    assert "https://x.com/user/status/2" in links
+    assert "https://x.com/user/status/3" in links
 
-    expected_scroll_calls = [call("window.scrollTo(0, document.body.scrollHeight)") for _ in range(2)]
-    expected_height_calls = [call("document.body.scrollHeight") for _ in range(2)]
+    # Verify that scroll and height evaluations were called as expected
+    expected_scroll_calls = [call("window.scrollTo(0, document.body.scrollHeight)") for _ in range(4)]
+    expected_height_calls = [call("document.body.scrollHeight") for _ in range(4)]
     mock_page.evaluate.assert_has_calls(expected_scroll_calls + expected_height_calls, any_order=True)
-    mock_page.query_selector_all.call_count == 2
+
+    # Ensure that we tried to type the search query and press enter
+    mock_page.type.assert_called_once_with('[data-testid="SearchBox_Search_Input"]', "TestKeyword min_faves:500 since:2024-01-01", delay=150)
+    mock_page.keyboard.press.assert_called_once_with('Enter')
+
+    # Verify that the page was navigated to logout and closed
+    mock_page.goto.assert_called_once_with('https://twitter.com/logout')
+    mock_page.close.assert_called_once()
 
 @pytest.mark.asyncio
 async def test_link_gatherer_exit(scraper):
     mock_page = AsyncMock()
     
-    # Ensure get_by_text returns None (no cookies button)
-    mock_page.get_by_text.return_value = None
-    
-    # Mock scrolling behavior
-    mock_page.evaluate.side_effect = side_effect_values([1000, 2000, 3000, 4000], 4000)  # Simulating the page scroll height
-    
-    # Mock the query_selector_all to return a list of mocked elements
-    mock_elements = [AsyncMock() for _ in range(3)]
-    for i, elem in enumerate(mock_elements):
-        elem.get_attribute.return_value = (f'/user/status/{i}')
-    mock_page.query_selector_all.return_value = mock_elements
+    # Define the side effects for different JavaScript evaluations
+    js_values = {
+        "window.scrollTo(0, document.body.scrollHeight)": None,  # Simulate scrolling action
+        "document.body.scrollHeight": [1000, 2000, 3000, 4000, 4000],  # Simulate the page height changes
+        """
+        const links = document.querySelectorAll('a');
+        const linkArray = Array.from(links).map(link => link.href);
+        return linkArray;
+        """: [
+            ["https://twitter.com/user/status/0", "https://twitter.com/user/status/1"],  # First scroll fetches 2 links
+            ["https://twitter.com/user/status/2"]  # Second scroll fetches 1 more link
+        ],
+        'default': []  # Default empty list
+    }
+
+    # Set up the side effect for evaluate
+    mock_page.evaluate.side_effect = side_effect_values(js_values)
 
     await scraper.link_gatherer(mock_page)
 
