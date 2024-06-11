@@ -15,6 +15,8 @@ import asyncio
 import re
 from bson import ObjectId
 import logging
+import requests
+import aiohttp
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -72,27 +74,41 @@ class TwitterScraper(IScraper):
 
 		logger.debug("Entered search query : %s", search_query)
 
-		cookies_button = await page.get_by_text("Refuse non-essential cookies")
-		if cookies_button:
-			await cookies_button.click()
-			logger.debug("Clicked on cookie button")
-		else:
-			logger.debug("No cookie button found")
+		# cookies_button = await page.get_by_text("Refuse non-essential cookies")
+		# if cookies_button:
+		# 	await cookies_button.click()
+		# 	logger.debug("Clicked on cookie button")
+		# else:
+		# 	logger.debug("No cookie button found")
 
+		async def extract_links(page):
+			#Using JS in the page.evaluate function
+			js_extract_links = """
+			const links = document.querySelectorAll('a');
+			const linkArray = Array.from(links).map(link => link.href);
+			linkArray;
+			"""
+
+			links = await page.evaluate(js_extract_links)
+			return links
+		
 		_prev_height = -1
 		_max_scrolls = 10
 		_scroll_count = 0
 		while _scroll_count < _max_scrolls:
 			await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-			await page.wait_for_timeout(100)
+			await page.wait_for_load_state()
 
-			anchor_tags = await page.query_selector_all('a')
-			logger.debug("Found %d anchor tags", len(anchor_tags))
+			# anchor_tags = await page.query_selector_all('a')
+			# logger.debug("Found %d anchor tags", len(anchor_tags))
+			# logger.debug(f"Anchor tags: {anchor_tags}")
+			current_links = await extract_links(page)
+			logger.debug("Found %d links", len(current_links))
+			for href in current_links:
+					regex = r'https?://(www\.)?x\.com/[A-Za-z0-9_]+/status/[0-9]+$'
+					if href and re.match(regex, href):
+						links.append(href)
 
-			for link_element in anchor_tags:
-				href = await link_element.get_attribute('href')
-				if href and re.match(r'\/[A-Za-z0-9_]+\/status\/[0-9]+$', href):
-					links.append("https://twitter.com" + href)
 			
 			logger.debug("Links collected so far: %s", links)
 
@@ -128,8 +144,9 @@ class TwitterScraper(IScraper):
 			async def scraping_logic(page, link):
 						try:
 							await page.goto(link)
-							num_code = (re.match(r'https://twitter\.com/[A-Za-z_\-0-9]+\/status/([0-9]+)$', link)).group(1)
-							url = (re.match(r'https://twitter\.com(/[A-Za-z_\-0-9]+\/status/[0-9]+)$', link)).group(1)
+							regex = r'https?://(www\.)?x\.com/[A-Za-z0-9_]+/status/[0-9]+$'
+							num_code = (re.match(r'https?://(www\.)?x\.com/[A-Za-z0-9_]+/status/([0-9]+)$', link)).group(2)
+							url = (re.match(r'https?://(www\.)?x\.com(/[A-Za-z0-9_]+/status/[0-9]+)$', link)).group(2)
 
 
 							'''
@@ -247,6 +264,62 @@ class TwitterScraper(IScraper):
 
 		return results
 	
+	async def api_implementation(self, links):
+		async def fetch_single_tweet(session, link):
+			try:
+				url = (re.match(r'https?://(www\.)?x\.com(/[A-Za-z0-9_]+/status/[0-9]+)$', link)).group(2)
+				link_id = (re.match(r'https?://(www\.)?x\.com/[A-Za-z0-9_]+/status/([0-9]+)$', link)).group(2)
+				api_url = f"https://cdn.syndication.twimg.com/tweet-result?features=tfw_timeline_list%3A%3Btfw_follower_count_sunset%3Atrue%3Btfw_tweet_edit_backend%3Aon%3Btfw_refsrc_session%3Aon%3Btfw_fosnr_soft_interventions_enabled%3Aon%3Btfw_mixed_media_15897%3Atreatment%3Btfw_experiments_cookie_expiration%3A1209600%3Btfw_show_birdwatch_pivots_enabled%3Aon%3Btfw_duplicate_scribes_to_settings%3Aon%3Btfw_use_profile_image_shape_enabled%3Aon%3Btfw_video_hls_dynamic_manifests_15082%3Atrue_bitrate%3Btfw_legacy_timeline_sunset%3Atrue%3Btfw_tweet_edit_frontend%3Aon&id={link_id}&lang=en&token=4ctznymvoer"
+				logger.debug(f"API URL: {api_url}")
+				async with session.get(api_url) as response:
+					logger.debug(f"Response status: {response.status}")
+					if response.status == 200:
+						tweet_data = await response.json()
+						logger.debug(f"Response data: {tweet_data}")
+
+						tweet_id = ObjectId(link_id.zfill(24))
+						tweet_content = tweet_data.get('text', '')
+						tweet_date = tweet_data.get('created_at', '')
+						tweet_likes = tweet_data.get('favorite_count', '')
+						tweet_views = tweet_data.get('view_count', '')
+						tweet_reposts = tweet_data.get('retweet_count', '')
+
+						tweet = Tweet(
+							_id=tweet_id, 
+							url=url,
+							title='',
+							description=tweet_content,
+							time=tweet_date,
+							upvotes=tweet_likes,
+							views=tweet_views,
+							reposts=tweet_reposts)
+						return tweet.to_doc()
+					else:
+						logger.debug(f"Failed to retrieve data for {link}: {response.status}")
+						return None
+			except Exception as e:
+				logger.debug(f"Error fetching data for {link}: {e}")
+				return None
+
+		tweets = []
+
+		async with aiohttp.ClientSession() as session:
+			tasks = []
+
+			for i in range(0, len(links), 10):
+				chunk = links[i:i+10]
+				tasks.extend([fetch_single_tweet(session=session, link=link) for link in chunk])
+
+				results = await asyncio.gather(*tasks)
+
+				tweets.extend([result for result in results if results is not None])
+
+				tasks.clear()
+
+		logger.debug(tweets)
+		return tweets
+
+
 	async def scrape(self):
 		async with async_playwright() as p:
 			start_time = time.time()
@@ -256,11 +329,17 @@ class TwitterScraper(IScraper):
 			if page is None:
 				logging.error("Page is none")
 			links = await self.link_gatherer(page=page)
-			twitterdata = await self.scraper(browser=browser, links=links)
+			#twitterdata = await self.scraper(browser=browser, links=links)
+			end_time_links = time.time()
+			total_time_links = end_time_links - start_time
+			start_time_api = time.time()
+			twitterdata = await self.api_implementation(links=links)
+			end_time_api = time.time()
+			total_time_api = end_time_api - start_time_api
 			links_len = len(links)
 			end_time = time.time()
 			total_time = end_time - start_time
-			print(f'{self.keyword}: {links_len} tweets scraped in {total_time} seconds.')
+			print(f'{self.keyword}: {links_len} tweets scraped in {total_time} seconds.\nLink Gathering took: {total_time_links}\nAPI Calls took: {total_time_api}')
 			await browser.close()
 
 		return twitterdata
