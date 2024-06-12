@@ -9,6 +9,7 @@ from .TweetEntity import *
 # from AccountClass import *
 # from TweetEntity import *
 from InterfaceScraper import IScraper
+from General.RepoStructure.IRepos import IPostRepository
 from playwright.async_api import async_playwright
 
 import asyncio
@@ -321,7 +322,7 @@ class TwitterScraper(IScraper):
 		return tweets
 
 
-	async def scrape(self):
+	async def scrape(self, post_repo: IPostRepository):
 		async with async_playwright() as p:
 			start_time = time.time()
 			browser = await p.chromium.launch(args=['--start-maximized'], headless=False)
@@ -329,21 +330,29 @@ class TwitterScraper(IScraper):
 			page = await self.login_account(browser=browser)
 			if page is None:
 				logging.error("Page is none")
+
 			links = await self.link_gatherer(page=page)
 			#twitterdata = await self.scraper(browser=browser, links=links)
 			end_time_links = time.time()
 			total_time_links = end_time_links - start_time
+
 			start_time_api = time.time()
 			twitterdata = await self.api_implementation(links=links)
 			end_time_api = time.time()
 			total_time_api = end_time_api - start_time_api
 			links_len = len(links)
+
+			start_time_repo = time.time()
+			post_results = await asyncio.gather(*[post_repo.add_post(post) for post in twitterdata])
+			end_time_repo =  time.time()
+			total_time_repo = end_time_repo - start_time_repo
+
 			end_time = time.time()
 			total_time = end_time - start_time
-			print(f'{self.keyword}: {links_len} tweets scraped in {total_time} seconds.\nLink Gathering took: {total_time_links}\nAPI Calls took: {total_time_api}')
+			print(f'{self.keyword}: {links_len} tweets scraped in {total_time} seconds.\nLink Gathering took: {total_time_links}\nAPI Calls took: {total_time_api}\nPushing to DB via Repo took: {total_time_repo}')
 			await browser.close()
 
-		return twitterdata
+		return post_results
 			
 
 
