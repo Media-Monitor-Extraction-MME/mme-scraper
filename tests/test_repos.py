@@ -19,8 +19,8 @@ def mock_db_manager():
 async def test_add_post(mock_db_manager):
     comment_repo = CommentRepo(mock_db_manager, "comments")
     document = {"content": "This is a test comment"}
-    await comment_repo.add_comment(document)
-    mock_db_manager.insert_documents.assert_awaited_once_with("comments", document)
+    await comment_repo.add_comment([document])
+    mock_db_manager.insert_documents.assert_awaited_once_with("comments", [[document]])
 
 @pytest.mark.asyncio
 async def test_remove_comment(mock_db_manager):
@@ -52,8 +52,8 @@ async def test_search_comment(mock_db_manager):
 async def test_add_post(mock_db_manager):
     post_repo = PostRepo(mock_db_manager, "posts")
     document = {"content": "This is a test post"}
-    await post_repo.add_post(document)
-    mock_db_manager.insert_documents.assert_awaited_once_with("posts", document)
+    await post_repo.add_post([document])
+    mock_db_manager.insert_documents.assert_awaited_once_with("posts", [[document]])
 
 @pytest.mark.asyncio
 async def test_remove_post(mock_db_manager):

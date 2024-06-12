@@ -105,31 +105,34 @@ async def main():
     #)
 
     #Twitter testing for multiple keywords:
+    manager = DBManager(db_name='scraped_data')
+    post_repo = PostRepo(db=manager, collection="scrapeddata")
     twitter_tasks = []
     for keyword in keywords:
         twitterscraper = TwitterScraper(username, password, keyword)
-        twitter_tasks.append(twitterscraper.scrape())
+        twitter_tasks.append(twitterscraper.scrape(post_repo=post_repo))
 
-    all_twitter_data = await asyncio.gather(*twitter_tasks)
+    await asyncio.gather(*twitter_tasks)
+    # all_twitter_data = await asyncio.gather(*twitter_tasks)
 
-    all_twitter_posts = [twitter_data for twitter_data in all_twitter_data]
+    # all_twitter_posts = [twitter_data for twitter_data in all_twitter_data]
 
     #reddit_posts = reddit_data[0]
     #reddit_comments = reddit_data[1]
     #twitter_posts = twitter_data[0]
     
     # upload data
-    manager = DBManager(db_name='scraped_data')
-    async def insert_documents(session):
+    # manager = DBManager(db_name='scraped_data')
+    # async def insert_documents(session):
             
-        #await manager.insert_documents("redditposts", reddit_posts, session=session)
-        #await manager.insert_documents("redditcomments", reddit_comments, session=session)
-        for twitter_posts in all_twitter_posts:
-            await manager.insert_documents("twitterdata", twitter_posts, session=session)
+    #     #await manager.insert_documents("redditposts", reddit_posts, session=session)
+    #     #await manager.insert_documents("redditcomments", reddit_comments, session=session)
+    #     for twitter_posts in all_twitter_posts:
+    #         await manager.insert_documents("twitterdata", twitter_posts, session=session)
     
-    async with await manager.client.start_session() as session:
-        async with session.start_transaction():
-            await insert_documents(session=session)
+    # async with await manager.client.start_session() as session:
+    #     async with session.start_transaction():
+    #         await insert_documents(session=session)
 
 
 asyncio.run(main())
