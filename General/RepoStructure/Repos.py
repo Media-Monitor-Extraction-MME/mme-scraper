@@ -17,7 +17,7 @@ class CommentRepo(ICommentRepository):
 
     #Methods
     async def add_comment(self, document: dict) -> Any:
-        return await self.db.insert_documents(self.collection, document)
+        return await self.db.insert_documents(self.collection, [document])
 
     async def remove_comment(self, filter: dict) -> Any:
         return await self.db.delete_documents(self.collection, filter)
@@ -36,7 +36,7 @@ class PostRepo(IPostRepository):
         
     #Methods
     async def add_post(self, document: dict) -> Any:
-        return await self.db.insert_documents(self.collection, document)
+        return await self.db.insert_documents(self.collection, [document])
 
     async def remove_post(self, filter: dict) -> Any:
         return await self.db.delete_documents(self.collection, filter)

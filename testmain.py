@@ -106,7 +106,7 @@ async def main():
 
     #Twitter testing for multiple keywords:
     manager = DBManager(db_name='scraped_data')
-    post_repo = PostRepo(db=manager, collection="scraped)data")
+    post_repo = PostRepo(db=manager, collection="scrapeddata")
     twitter_tasks = []
     for keyword in keywords:
         twitterscraper = TwitterScraper(username, password, keyword)
