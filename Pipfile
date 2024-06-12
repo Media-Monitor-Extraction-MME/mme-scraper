@@ -10,7 +10,11 @@ playwright = "*"
 http-request-randomizer = "*"
 motor = "*"
 python-dotenv = "*"
-requests = ">=2.32.0"
+requests = "*"
+pytest = "*"
+pytest-asyncio = "*"
+pytest-playwright = "*"
+aiohttp = "*"
 
 [dev-packages]
 

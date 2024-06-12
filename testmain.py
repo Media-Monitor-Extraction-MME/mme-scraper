@@ -23,7 +23,6 @@ import logging
 import asyncio
 
 import time
-import numpy as np
 import json
 
 
@@ -77,7 +76,7 @@ async def main():
     username = None
     password = None
     keyword = "Trump"
-    keywords = ['Nicki Minaj', 'Drake', 'Dua Lipa', 'Justin Bieber', 'Andrew Tate']
+    keywords = ['Nicki Minaj']
 
 
 

@@ -6,6 +6,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 #Imports
 from .AccountClass import *
 from .TweetEntity import *
+# from AccountClass import *
+# from TweetEntity import *
 from InterfaceScraper import IScraper
 from playwright.async_api import async_playwright
 
@@ -13,33 +15,20 @@ import asyncio
 import re
 from bson import ObjectId
 import logging
+import requests
+import aiohttp
 
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 class TwitterScraper(IScraper):
 	def __init__(self, link_gather_account_username, link_gather_account_password, keyword):
 		self.link_gather_account_username = link_gather_account_username
 		self.link_gather_account_password = link_gather_account_password
 		self.keyword = keyword
-		logging.basicConfig(level=logging.INFO)
 
-	link_gather_account = Account
-	link = None
-	keyword = str
 
-	async def login_account(self, browser, retry_count=0):
-		'''
-		account_location = 'account_data/accounts.txt'
-		try:
-			with open(account_location, 'r') as file:
-				last_line = file.readlines()[-1]
-			
-			#account = last_line.split(', ')
-			#username = account[1].strip()
-			#password = account[3].strip()
-		except FileNotFoundError:
-			logging.error("Account file not found")
-			return None
-		'''
+	async def login_account(self, browser):
 		context = None
 
 		try:
@@ -69,149 +58,76 @@ class TwitterScraper(IScraper):
 				await page.wait_for_load_state()
 				await asyncio.sleep(5)
 
-				#search_box_selector = '[data-testid="SearchBox_Search_Input"]'
-				#await asyncio.wait_for(page.wait_for_selector(search_box_selector), timeout=10)
 				logging.info("Login successful")
 				return page
 
 		except (asyncio.TimeoutError, Exception) as e:
 				logging.error(f"An error occurred: {str(e)}")
-				'''
-				if context:
-					await context.close()
-				_context = await browser.new_context(no_viewport=True)
-
-				if retry_count < 2:
-					retry_count = retry_count + 1
-					await asyncio.sleep(10)
-					await Account.create_account(_context)
-					return await self.login_account(browser), retry_count
-				else:
-					logging.error("Max login tries reached, the application will now shutdown")
-				'''
 	
 	async def link_gatherer(self, page):
 		links = []
 
 		search_selector_id = '[data-testid="SearchBox_Search_Input"]'
-		await page.type(search_selector_id, "testing", delay=150)
+		search_query = f"{self.keyword} min_faves:500 since:2024-01-01"
+		await page.type(search_selector_id, search_query, delay=150)
 		await page.keyboard.press('Enter')
-			
 
-		#Allows for filtering
-		advanced_search = 'text="Advanced search"'
-		await page.click(advanced_search)
-		await asyncio.sleep(1)
+		logger.debug("Entered search query : %s", search_query)
 
-		keyword_selector = 'input[name="allOfTheseWords"]'
-		await page.type(keyword_selector, self.keyword, delay=150)
-		await asyncio.sleep(2)
-			
-			#Filtering based on hashtags
-		'''
-		keyword = f"#{keyword}"
-		hashtag_selector = 'input[name="theseHashtags"]'
-		await page.type(hashtag_selector, keyword, delay=150)
-		'''
+		# cookies_button = await page.get_by_text("Refuse non-essential cookies")
+		# if cookies_button:
+		# 	await cookies_button.click()
+		# 	logger.debug("Clicked on cookie button")
+		# else:
+		# 	logger.debug("No cookie button found")
 
-		#Filtering based on likes
-		likes = "500"
-		min_likes = 'input[name="minLikes"]'    
-		await page.type(min_likes, likes, delay=150)
-		await asyncio.sleep(1)
+		async def extract_links(page):
+			#Using JS in the page.evaluate function
+			js_extract_links = """
+			const links = document.querySelectorAll('a');
+			const linkArray = Array.from(links).map(link => link.href);
+			linkArray;
+			"""
 
-		#Filtering based on replies
-		...
-
-		#Filtering based on reposts/retweets
-		...
-
-		#Maybe more filtering (enabling/disabling links/replies)
-
-		advanced_search_button = 'text="Search"'
-		await page.click(advanced_search_button)
-		await asyncio.sleep(1)
-
-		cookies_button = page.get_by_text("Refuse non-essential cookies")
-		if cookies_button:
-			await cookies_button.click()
-		else:
-			return
-
+			links = await page.evaluate(js_extract_links)
+			return links
+		
 		_prev_height = -1
-		_max_scrolls = 10
+		_max_scrolls = 20
 		_scroll_count = 0
-		print(f"Max scrolls: {_max_scrolls}")
 		while _scroll_count < _max_scrolls:
-			# Execute JavaScript to scroll to the bottom of the page
 			await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-			# Wait for new content to load (change this value as needed)
-			await page.wait_for_timeout(100)
-			link_selectors = await page.locator('.css-175oi2r').get_by_role('link').all()
-			#print(link_selectors)
+			await page.wait_for_timeout(1000)
 
-			article_elements = await page.get_by_role('article').all()
-			#print(article_elements)
+			# anchor_tags = await page.query_selector_all('a')
+			# logger.debug(f"Anchor tags: {anchor_tags}")
+			# logger.debug("Found %d anchor tags", len(anchor_tags))
+			# logger.debug(f"Anchor tags: {anchor_tags}")
+			current_links = await extract_links(page)
+			# logger.debug("Found links: %s", current_links)
+			for href in current_links:
+					regex = r'https?://(www\.)?x\.com/[A-Za-z0-9_]+/status/[0-9]+$'
+					if href and re.match(regex, href):
+						links.append(href)
 
-			anchor_tags = await page.query_selector_all('a')
-			#print(anchor_tags)
+			
+			logger.debug("Links collected so far: %s", links)
 
-			for link_element in anchor_tags:
-				href = await link_element.get_attribute('href')
-				if href and re.match(r'\/[A-Za-z0-9_]+\/status\/[0-9]+$', href):
-					links.append("https://twitter.com" + href)
-					if len(links) >= 50:  # Break after collecting 20 valid links
-						break
-				#await asyncio.sleep(1)
-			# Check whether the scroll height changed - means more pages are there
 			new_height = await page.evaluate("document.body.scrollHeight")
 			if new_height == _prev_height:
+				logger.debug("Reached the bottom of page, or no new content found")
 				break
 			_prev_height = new_height
 			_scroll_count += 1
-			print(f"Scroll count: {_scroll_count}")
-
+			logger.debug("Scroll count: %d", _scroll_count)
 		await asyncio.sleep(5)
-		#await page.wait_for_load_stage()
-
-		'''
-		link_selectors = await page.locator('.css-175oi2r').get_by_role('link').all()
-		print(link_selectors)
-
-		article_element = await page.get_by_role('article').all()
-		print(article_element)
-
-		for link_element in link_selectors:
-			href = await link_element.get_attribute('href')
-			if href and re.match(r'\/[A-Za-z0-9_]+\/status\/[0-9]+$', href):
-				links.append("https://twitter.com" + href)
-				if len(links) >= 50:  # Break after collecting 20 valid links
-					break
-			await asyncio.sleep(1)
-		'''
-
-		#Logging out
-		'''
-		account_selector_testid = '[data-testid="SideNav_AccountSwitcher_Button"]'
-		await page.click(account_selector_testid)
-
-		asyncio.sleep(2)
-
-		logout_testid = '[data-testid="AccountSwitcher_Logout_Button"]'
-		await page.click(logout_testid)
-		'''
 
 		await page.goto('https://twitter.com/logout')
-
-		#confirm_logout = '[data-testid="confirmationSheetConfirm"]'
-		#await page.get_by_text("Log out").click()
-
-		#if confirm_logout:
-			#await page.click(confirm_logout)
-		#else:
-			#return
+		logger.debug("Navigated to logout")
+		await page.close()
+		logger.debug("Page closed")
 			
-		print(links)	
+		logger.debug("Final links collected: %s", links)	
 		return list(set(links))
 
 	
@@ -225,20 +141,13 @@ class TwitterScraper(IScraper):
 		for i in range(0, len(links), pages_per_context):
 			context = await browser.new_context()
 			contexts.append(context)
-			#timeout = 60000
-			#page.set_default_timeout(timeout)
 			pages = await asyncio.gather(*[context.new_page() for _ in range(pages_per_context)])
-
-			#Assign links to pages
-			tasks = []
-			for page, link in zip(pages, links[i:i+pages_per_context]):
-				async def scraping_logic(page, link):
+			async def scraping_logic(page, link):
 						try:
 							await page.goto(link)
-							print(link)
-							num_code = (re.match(r'https://twitter\.com/[A-Za-z_\-0-9]+\/status/([0-9]+)$', link)).group(1)
-							print(num_code)
-							url = (re.match(r"/[a-zA-Z0-9_]+/status/\d+", link))
+							regex = r'https?://(www\.)?x\.com/[A-Za-z0-9_]+/status/[0-9]+$'
+							num_code = (re.match(r'https?://(www\.)?x\.com/[A-Za-z0-9_]+/status/([0-9]+)$', link)).group(2)
+							url = (re.match(r'https?://(www\.)?x\.com(/[A-Za-z0-9_]+/status/[0-9]+)$', link)).group(2)
 
 
 							'''
@@ -270,28 +179,22 @@ class TwitterScraper(IScraper):
 								tweet_content = ''
 
 							# Extract the date
-							date_pattern = r"\d{1,2}:\d{2} [ap]m · \d{1,2} \w+ \d{4}"
+							date_pattern = r"(\d{1,2}:\d{2} [ap]m · \d{1,2} \w+ \d{4})"
 							date = re.search(date_pattern, tweet_content)
 							tweet_date = date.group(0) if date else None
 
 							# Extract views, reposts, quotes, likes, and bookmarks
 							views_pattern = r"(\d[\d,.KkMm]*) Views"
 							reposts_pattern = r"(\d[\d,.KkMm]*) Reposts"
-							quotes_pattern = r"(\d[\d,.KkMm]*) Quotes"
 							likes_pattern = r"(\d[\d,.KkMm]*) Likes"
-							bookmarks_pattern = r"(\d[\d,.KkMm]*) Bookmarks"
 
 							views = re.search(views_pattern, tweet_content)
 							reposts = re.search(reposts_pattern, tweet_content)
-							quotes = re.search(quotes_pattern, tweet_content)
 							likes = re.search(likes_pattern, tweet_content)
-							bookmarks = re.search(bookmarks_pattern, tweet_content)
 
 							tweet_views = views.group(1) if views else None
 							tweet_reposts = reposts.group(1) if reposts else None
-							tweet_quotes = quotes.group(1) if quotes else None
 							tweet_likes = likes.group(1) if likes else None
-							tweet_bookmarks = bookmarks.group(1) if bookmarks else None
 
 							emoji_pattern = r"[\U00010000-\U0010ffff]"
 
@@ -313,21 +216,21 @@ class TwitterScraper(IScraper):
 							emoji = re.findall(emoji_pattern, tweet_content)
 							tweet_content_with_emoji = tweet_content_text + " " + ''.join(emoji).strip()
 
-							tweet_comments = ''
-
 							hex_string = num_code.zfill(24)
 							objectId = ObjectId(hex_string)
 
 							tweet = Tweet(
 										_id=objectId,
 										url=url, 
-										title=tweet_content_with_emoji, 
+										title='',
+										description=tweet_content_with_emoji, 
 										time=tweet_date, 
 										upvotes=tweet_likes,
 										views=tweet_views, 
 										reposts=tweet_reposts 
 										)
-							
+						
+							await page.close()
 							return tweet.to_doc() 
 
 						except Exception as e:
@@ -341,18 +244,19 @@ class TwitterScraper(IScraper):
 								_id=objectId,
 								url=url,
 								title='',
+								description='',
 								time='',
 								upvotes='',
 								views='',
 								reposts=''
 								)
+							await page.close()
 							return fallback_tweet.to_doc()
 
-						finally:
-							await page.close()
-
+			#Assign links to pages
+			tasks = []
+			for page, link in zip(pages, links[i:i+pages_per_context]):		
 				tasks.append(scraping_logic(page, link))
-
 			results.extend(await asyncio.gather(*tasks))
 
 		# Close all contexts
@@ -361,21 +265,82 @@ class TwitterScraper(IScraper):
 
 		return results
 	
+	async def api_implementation(self, links):
+		async def fetch_single_tweet(session, link):
+			try:
+				url = (re.match(r'https?://(www\.)?x\.com(/[A-Za-z0-9_]+/status/[0-9]+)$', link)).group(2)
+				link_id = (re.match(r'https?://(www\.)?x\.com/[A-Za-z0-9_]+/status/([0-9]+)$', link)).group(2)
+				api_url = f"https://cdn.syndication.twimg.com/tweet-result?features=tfw_timeline_list%3A%3Btfw_follower_count_sunset%3Atrue%3Btfw_tweet_edit_backend%3Aon%3Btfw_refsrc_session%3Aon%3Btfw_fosnr_soft_interventions_enabled%3Aon%3Btfw_mixed_media_15897%3Atreatment%3Btfw_experiments_cookie_expiration%3A1209600%3Btfw_show_birdwatch_pivots_enabled%3Aon%3Btfw_duplicate_scribes_to_settings%3Aon%3Btfw_use_profile_image_shape_enabled%3Aon%3Btfw_video_hls_dynamic_manifests_15082%3Atrue_bitrate%3Btfw_legacy_timeline_sunset%3Atrue%3Btfw_tweet_edit_frontend%3Aon&id={link_id}&lang=en&token=4ctznymvoer"
+				logger.debug(f"API URL: {api_url}")
+				async with session.get(api_url) as response:
+					logger.debug(f"Response status: {response.status}")
+					if response.status == 200:
+						tweet_data = await response.json()
+						logger.debug(f"Response data: {tweet_data}")
+
+						tweet_id = ObjectId(link_id.zfill(24))
+						tweet_content = tweet_data.get('text', '')
+						tweet_date = tweet_data.get('created_at', '')
+						tweet_likes = tweet_data.get('favorite_count', '')
+						tweet_views = tweet_data.get('view_count', '')
+						tweet_reposts = tweet_data.get('retweet_count', '')
+
+						tweet = Tweet(
+							_id=tweet_id, 
+							url=url,
+							title='',
+							description=tweet_content,
+							time=tweet_date,
+							upvotes=tweet_likes,
+							views=tweet_views,
+							reposts=tweet_reposts)
+						return tweet.to_doc()
+					else:
+						logger.debug(f"Failed to retrieve data for {link}: {response.status}")
+						return None
+			except Exception as e:
+				logger.debug(f"Error fetching data for {link}: {e}")
+				return None
+
+		tweets = []
+
+		async with aiohttp.ClientSession() as session:
+			tasks = []
+
+			for i in range(0, len(links), 10):
+				chunk = links[i:i+10]
+				tasks.extend([fetch_single_tweet(session=session, link=link) for link in chunk])
+
+				results = await asyncio.gather(*tasks)
+
+				tweets.extend([result for result in results if results is not None])
+
+				tasks.clear()
+
+		logger.debug(tweets)
+		return tweets
+
+
 	async def scrape(self):
 		async with async_playwright() as p:
 			start_time = time.time()
 			browser = await p.chromium.launch(args=['--start-maximized'], headless=False)
 
 			page = await self.login_account(browser=browser)
-			print(page)
 			if page is None:
 				logging.error("Page is none")
 			links = await self.link_gatherer(page=page)
-			twitterdata = await self.scraper(browser=browser, links=links)
+			#twitterdata = await self.scraper(browser=browser, links=links)
+			end_time_links = time.time()
+			total_time_links = end_time_links - start_time
+			start_time_api = time.time()
+			twitterdata = await self.api_implementation(links=links)
+			end_time_api = time.time()
+			total_time_api = end_time_api - start_time_api
 			links_len = len(links)
 			end_time = time.time()
 			total_time = end_time - start_time
-			print(f'Twitter: {links_len} tweets scraped in {total_time} seconds.')
+			print(f'{self.keyword}: {links_len} tweets scraped in {total_time} seconds.\nLink Gathering took: {total_time_links}\nAPI Calls took: {total_time_api}')
 			await browser.close()
 
 		return twitterdata
