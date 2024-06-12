@@ -328,7 +328,6 @@ class RedditScraper(IScraper):
             description = await page.query_selector('.usertext.usertext-body')
             posts['description'] = await description.inner_text() if description else None
             comments_data = await process_comments(comment_data, post['_id'])
-            comments_data = await process_comments(comment_data, post['_id'])
             #comments = [comment for sublist in comments_data for comment in sublist if comment is not None]
 
             return comments_data  
