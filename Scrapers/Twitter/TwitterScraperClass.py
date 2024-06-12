@@ -100,10 +100,11 @@ class TwitterScraper(IScraper):
 			await page.wait_for_timeout(1000)
 
 			# anchor_tags = await page.query_selector_all('a')
+			# logger.debug(f"Anchor tags: {anchor_tags}")
 			# logger.debug("Found %d anchor tags", len(anchor_tags))
 			# logger.debug(f"Anchor tags: {anchor_tags}")
 			current_links = await extract_links(page)
-			logger.debug("Found links: %s", current_links)
+			# logger.debug("Found links: %s", current_links)
 			for href in current_links:
 					regex = r'https?://(www\.)?x\.com/[A-Za-z0-9_]+/status/[0-9]+$'
 					if href and re.match(regex, href):
