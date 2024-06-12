@@ -128,16 +128,6 @@ class RedditScraper(IScraper):
             Returns:
                 A dictionary containing the mapped post data.
             """
-            """
-            Maps the attributes of a post to the post dictionary.
-            
-            Args:
-                @post: The post dictionary.
-                @attributes: The attributes of the post element.
-            
-            Returns:
-                A dictionary containing the mapped post data.
-            """
             mapping = {
                 'data-fullname': '_id',
                 'data-timestamp': 'time',
