@@ -12,17 +12,10 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from playwright.async_api import async_playwright
 from bson import ObjectId
 import hashlib
-
-import hashlib
-
-
 from InterfaceScraper import IScraper
-
 import re
 import asyncio
 import datetime
-
-
 
 class RedditScraper(IScraper):
     
@@ -91,29 +84,7 @@ class RedditScraper(IScraper):
         
         return filtered_subreddits
 
-    async def generate_id(self, string: str) -> str:
-        """
-        Generates a unique ID from a string.
-        
-        Args:
-            @string: The string to generate an ID from.
-        
-        Returns:
-            (str): The generated ID.
-        """
-        # Hash the input string using SHA-1
-        hash_object = hashlib.sha1(string.encode())
-        
-        # Take the first 12 bytes of the hash
-        objectid_hex = hash_object.hexdigest()[:24]
-        
-        # Create an ObjectId from the hex string
-        object_id = ObjectId(objectid_hex)
-        
-        return object_id
-    
-
-    async def generate_id(self, string: str) -> str:
+    async def generate_id(self, string: str) -> ObjectId:
         """
         Generates a unique ID from a string.
         
@@ -171,22 +142,18 @@ class RedditScraper(IScraper):
                 'data-fullname': '_id',
                 'data-timestamp': 'time',
                 'data-permalink': 'url',
-                'data-score': 'upvotes'
+                'data-score': 'upvotes',
                 'data-fullname': '_id',
                 'data-timestamp': 'time',
-                'data-permalink': 'url',
-                'data-score': 'upvotes'
-            }
+                'data-permalink': 'url'
+                }
             
             ## check if ad and skips if true
-            ## attribute contains this field (data-promoted) so we can check if it's an ad -> doesn't work.. ?
-            ## ads usually start with u/ instead of r/
             ## attribute contains this field (data-promoted) so we can check if it's an ad -> doesn't work.. ?
             ## ads usually start with u/ instead of r/
             ## attributes also contain data-nsfw for nsfw posts
             for attr in attributes:
                 if attr['name'] == 'data-promoted' and attr['value'] == 'true':
-                    return None
                     return None
                 if attr['name'] in mapping:
                     post[mapping[attr['name']]] = attr['value']
@@ -198,24 +165,11 @@ class RedditScraper(IScraper):
                 
             if post['_id']:
                 post['_id'] = await self.generate_id(post['_id'])
-                
-            if post['_id']:
-                post['_id'] = await self.generate_id(post['_id'])
             
             return post
         
         #Helper Function
         async def process_element(page, element):
-            """
-            Processes a post element and extracts its data.
-           
-            Args:
-                @page: The Playwright page object.
-                @element: The post element.
-            
-            Returns:
-                A dictionary containing the post data. 
-            """
             """
             Processes a post element and extracts its data.
            
@@ -238,9 +192,7 @@ class RedditScraper(IScraper):
                 'views': None,
                 'reposts': None,
                 'time': None,
-                'upvotes': None,
-                'views': None,
-                'reposts': None,
+                'upvotes': None
             }
             attributes = await element.evaluate('el => { return Array.from(el.attributes).map(attr => ({name: attr.name, value: attr.value})); }')
             mapped_post = await map_post(post, attributes)
@@ -249,10 +201,7 @@ class RedditScraper(IScraper):
                 data_fullname = next(attr['value'] for attr in attributes if attr['name'] == 'data-fullname')
                 post['title'] = await (await page.query_selector(f"div[data-fullname='{data_fullname}'] > div.entry.unvoted > div.top-matter > p.title > a" )).inner_text()
                 post['description'] = await (await page.query_selector(f"#form-{data_fullname} > div.usertext-body")).inner_text()
-                post['description'] = await (await page.query_selector(f"#form-{data_fullname} > div.usertext-body")).inner_text()
                 return post
-            else:
-                return None
             else:
                 return None
         
@@ -292,6 +241,15 @@ class RedditScraper(IScraper):
             A dictionary containing the title, upvotes, description, and comments of the Reddit post.
         """
         comments_data = []
+        async def generate_id(id: str) -> ObjectId:
+            """
+            Generates a unique ID for a comment.
+            
+            Returns:
+                (str): The generated ID.
+            """
+            
+            return ObjectId()
 
         async def process_comments(comments, post_id, level=0):
             # Recursively process comments and generate unique IDs for each comment
