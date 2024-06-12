@@ -105,10 +105,12 @@ async def main():
     #)
 
     #Twitter testing for multiple keywords:
+    manager = DBManager(db_name='scraped_data')
+    post_repo = PostRepo(db=manager, collection="scraped)data")
     twitter_tasks = []
     for keyword in keywords:
         twitterscraper = TwitterScraper(username, password, keyword)
-        twitter_tasks.append(twitterscraper.scrape())
+        twitter_tasks.append(twitterscraper.scrape(post_repo=post_repo))
 
     await asyncio.gather(*twitter_tasks)
     # all_twitter_data = await asyncio.gather(*twitter_tasks)
