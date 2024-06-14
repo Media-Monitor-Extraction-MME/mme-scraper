@@ -36,7 +36,7 @@ async def test_fetch_single_tweet(scraper):
         link = "https://x.com/JamesLucasIT/status/1799856071609049548"
 
         #Make function call
-        tweets = await scraper.api_implementation([link])
+        tweets = await scraper._api_implementation([link])
 
         #Validate
         assert len(tweets) == 1
@@ -64,7 +64,7 @@ async def test_api_implementation_multiple_links(scraper):
         ]
 
         #Make function call
-        tweets = await scraper.api_implementation(links)
+        tweets = await scraper._api_implementation(links)
 
         #Validate
         assert len(tweets) == 2

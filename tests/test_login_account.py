@@ -33,7 +33,7 @@ async def test_login_browser_success(scraper):
     mock_page.wait_for_load_state.return_value = asyncio.Future()
     mock_page.wait_for_load_state.return_value.set_result(None)
 
-    result = await scraper.login_account(mock_browser)
+    result = await scraper._login_account(mock_browser)
 
     assert result == mock_page
     mock_browser.new_context.assert_called_once_with(no_viewport=True)
@@ -58,7 +58,7 @@ async def test_login_account_failure(scraper):
     # Mocking an exception during the login process
     mock_page.goto.side_effect = Exception("Test error")
 
-    result = await scraper.login_account(mock_browser)
+    result = await scraper._login_account(mock_browser)
 
     assert result is None
     mock_browser.new_context.assert_called_once_with(no_viewport=True)
