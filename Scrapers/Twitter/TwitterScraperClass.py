@@ -41,7 +41,7 @@ class TwitterScraper(IScraper):
 		self.keyword = keyword
 
 
-	async def __login_account(self, browser):
+	async def _login_account(self, browser):
 		'''
 		A method to login to twitter based on the account passed in the constructor
 
@@ -92,7 +92,7 @@ class TwitterScraper(IScraper):
 		except (asyncio.TimeoutError, Exception) as e:
 				logging.error(f"An error occurred: {str(e)}")
 	
-	async def __link_gatherer(self, page):
+	async def _link_gatherer(self, page):
 		'''
 		A method used to gather links from the Twitter page based on a specified keyword
 
@@ -167,7 +167,7 @@ class TwitterScraper(IScraper):
 	#############################################################################
 	# This function is no longer in use, but I just wanted to show the algorithm.	
 	#############################################################################
-	async def __scraper(self, browser, links):
+	async def _scraper(self, browser, links):
 		results = []
 		contexts = []
 
@@ -178,7 +178,7 @@ class TwitterScraper(IScraper):
 			context = await browser.new_context()
 			contexts.append(context)
 			pages = await asyncio.gather(*[context.new_page() for _ in range(pages_per_context)])
-			async def __scraping_logic(page, link):
+			async def _scraping_logic(page, link):
 						try:
 							await page.goto(link)
 							regex = r'https?://(www\.)?x\.com/[A-Za-z0-9_]+/status/[0-9]+$'
@@ -292,7 +292,7 @@ class TwitterScraper(IScraper):
 			#Assign links to pages
 			tasks = []
 			for page, link in zip(pages, links[i:i+pages_per_context]):		
-				tasks.append(__scraping_logic(page, link))
+				tasks.append(_scraping_logic(page, link))
 			results.extend(await asyncio.gather(*tasks))
 
 		# Close all contexts
@@ -301,7 +301,7 @@ class TwitterScraper(IScraper):
 
 		return results
 	
-	async def __api_implementation(self, links):
+	async def _api_implementation(self, links):
 		'''
 		Fetches tweet details based on the undocumented embedding API
 
@@ -315,7 +315,7 @@ class TwitterScraper(IScraper):
 		tweets : [{}]
 			A list of dicts (tweet data) ready for DB insertion
 		'''
-		async def __fetch_single_tweet(session, link):
+		async def _fetch_single_tweet(session, link):
 			try:
 				url = (re.match(r'https?://(www\.)?x\.com(/[A-Za-z0-9_]+/status/[0-9]+)$', link)).group(2)
 				link_id = (re.match(r'https?://(www\.)?x\.com/[A-Za-z0-9_]+/status/([0-9]+)$', link)).group(2)
@@ -358,7 +358,7 @@ class TwitterScraper(IScraper):
 
 			for i in range(0, len(links), 10):
 				chunk = links[i:i+10]
-				tasks.extend([__fetch_single_tweet(session=session, link=link) for link in chunk])
+				tasks.extend([_fetch_single_tweet(session=session, link=link) for link in chunk])
 
 				results = await asyncio.gather(*tasks)
 
@@ -388,17 +388,17 @@ class TwitterScraper(IScraper):
 			start_time = time.time()
 			browser = await p.chromium.launch(args=['--start-maximized'], headless=False)
 
-			page = await self.__login_account(browser=browser)
+			page = await self._login_account(browser=browser)
 			if page is None:
 				logging.error("Page is none")
 
-			links = await self.__link_gatherer(page=page)
+			links = await self._link_gatherer(page=page)
 			#twitterdata = await self.scraper(browser=browser, links=links)
 			end_time_links = time.time()
 			total_time_links = end_time_links - start_time
 
 			start_time_api = time.time()
-			twitterdata = await self.__api_implementation(links=links)
+			twitterdata = await self._api_implementation(links=links)
 			end_time_api = time.time()
 			total_time_api = end_time_api - start_time_api
 			links_len = len(links)
