@@ -49,7 +49,7 @@ async def test_link_gatherer_typing_and_search(scraper):
     mock_page.keyboard.press.return_value = asyncio.Future()
     mock_page.keyboard.press.return_value.set_result(None)
 
-    await scraper.link_gatherer(mock_page)
+    await scraper.__link_gatherer(mock_page)
 
     mock_page.type.assert_any_call('[data-testid="SearchBox_Search_Input"]', "TestKeyword min_faves:500 since:2024-01-01", delay=150)
     mock_page.keyboard.press.assert_any_call('Enter')
@@ -153,7 +153,7 @@ async def test_link_gatherer_exit(scraper):
     # Set up the side effect for evaluate
     mock_page.evaluate.side_effect = side_effect_values(js_values)
 
-    await scraper.link_gatherer(mock_page)
+    await scraper.__link_gatherer(mock_page)
 
     # Ensure the logout navigation is called
     mock_page.goto.assert_called_once_with('https://twitter.com/logout')
