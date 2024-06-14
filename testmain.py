@@ -76,7 +76,7 @@ async def main():
     username = None
     password = None
     keyword = "Trump"
-    keywords = ['Nicki Minaj']
+    keywords = ['Dua Lipa']
 
 
 
