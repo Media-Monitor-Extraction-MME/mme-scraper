@@ -57,6 +57,7 @@ class TwitterScraper(IScraper):
 		page : Any
 			Returns a twitter homepage where the search can be starteds
 		'''
+
 		context = None
 
 		try:
@@ -105,6 +106,7 @@ class TwitterScraper(IScraper):
 		links : [str]
 			A list of gathered tweet URL's
 		'''
+
 		links = []
 
 		search_selector_id = '[data-testid="SearchBox_Search_Input"]'
@@ -167,6 +169,7 @@ class TwitterScraper(IScraper):
 	#############################################################################
 	# This function is no longer in use, but I just wanted to show the algorithm.	
 	#############################################################################
+
 	async def _scraper(self, browser, links):
 		results = []
 		contexts = []

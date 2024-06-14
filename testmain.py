@@ -76,9 +76,7 @@ async def main():
     username = None
     password = None
     keyword = "Trump"
-    keywords = ['Dua Lipa', 'Drake']
-
-
+    keywords = ['Dua Lipa']
 
     try:
         with open('Scrapers/Twitter/account_data/accounts.txt', 'r') as file:
