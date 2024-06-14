@@ -78,8 +78,6 @@ async def main():
     keyword = "Trump"
     keywords = ['Dua Lipa']
 
-
-
     try:
         with open('Scrapers/Twitter/account_data/accounts.txt', 'r') as file:
             logging.info("File found")

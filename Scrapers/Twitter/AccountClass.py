@@ -7,7 +7,26 @@ from playwright.async_api import async_playwright
 import time, datetime, random, secrets, string, asyncio
 
 class Account:
-    def __init__(self, first_name, last_name, username, password, date_of_birth, email):
+    '''
+    A class to represent a Twitter(X) account
+
+    Attributes:
+    -----------
+    first_name: str
+        used for username generation
+    last_name: str
+        used for username generation
+    username: str
+        generated based on first and last name
+    password: str
+        password for the account
+    date_of_birth:
+        needed for account creation (age>18)
+    email: str
+        needed for account creation
+    '''
+
+    def __init__(self, first_name: str, last_name: str, username: str, password: str, date_of_birth, email: str):
         self.first_name = first_name
         self.last_name = last_name
         self.username = username
@@ -18,6 +37,17 @@ class Account:
 
     @staticmethod
     async def email_generator(context):
+        '''
+        Method to generate email used for account creation
+
+        Parameters:
+        -----------
+        context = Playwright context to allow playwright to open a new page to navigate to burner mail site.
+
+        Returns:
+        --------
+        mail = email used for account creation
+        '''
         async with async_playwright():
             page = await context.new_page()
             await page.goto("https://10minutemail.com")
@@ -30,6 +60,18 @@ class Account:
 
     @staticmethod
     async def random_credentials_generator(context, age=None):
+        '''
+        Method to generate credentials used for account creation
+
+        Parameters:
+        -----------
+        context = Playwright context to access email_generator
+        age = Instantiated age so it could be used in the function
+
+        Returns:
+        --------
+        All needed data to generate an account on Twitter(X)
+        '''
         date = datetime.date.today()
         current_year = date.year()
 
@@ -53,6 +95,18 @@ class Account:
         return first_name, last_name, username, password, birthday, email
 
     async def create_account(self, context):
+        '''
+        Script-like method to create an account on Twitter(X) for a certain route
+
+        Parameters:
+        -----------
+        self = allows access to Account fields
+        context = Playwright context to allow it to access the internet
+
+        Returns:
+        --------
+        Writes account credentials to file after creation
+        '''
         first_name, last_name, username, password, date_of_birth, email = await self.random_credentials_generator(context)
         self.first_name = first_name
         self.last_name = last_name
@@ -84,7 +138,7 @@ class Account:
             asyncio.sleep(0.5)
             await page.type(email_selector, self.email, delay=150)
             await page.evaluate(f'''() => {{
-            const element = document.querySelector("{username_selector}");
+            const element = document.querySelector("{email_selector}");
             if (element) element.blur();
             }}''')
 
@@ -128,9 +182,15 @@ class Account:
             else:
                 print("Element not found")
         
+            #ARKOSE CAPTCHA
             asyncio.sleep(120)
 
             pages = context.pages
+
+            ##############################################################################################
+            # After completing the CAPTHCA a verification code gets sent to the inbox of the burner email.
+            # The following code re-opens the mail-page and retrieves the code
+            ##############################################################################################
 
             ten_minute_mail_page = None
             for page in pages:
@@ -152,6 +212,10 @@ class Account:
             
             else:
                 print("10minutemail page not found")
+
+            #########################################################################
+            # Now it proceeds to login to Twitter with the newly created account
+            #########################################################################
 
             twitter_creation_page = None
             for page in pages:

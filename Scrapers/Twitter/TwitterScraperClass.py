@@ -23,6 +23,18 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 class TwitterScraper(IScraper):
+	'''
+	A class to scrape twitter for tweets based on keyword queries
+
+	Fields:
+	-------
+	link_gather_account_username : str
+		Username for twitter account used for link gathering
+	link_gather_account_password : str
+		Password for twitter account used for link gathering
+	keyword : str
+		Keyword used for search query
+	'''
 	def __init__(self, link_gather_account_username, link_gather_account_password, keyword):
 		self.link_gather_account_username = link_gather_account_username
 		self.link_gather_account_password = link_gather_account_password
@@ -30,6 +42,22 @@ class TwitterScraper(IScraper):
 
 
 	async def _login_account(self, browser):
+		'''
+		A method to login to twitter based on the account passed in the constructor
+
+		Parameters:
+		-----------
+		self : TwitterScraper
+			Gives access to account username and password
+		browser: Any
+			Allows playwright to open contexts/pages to use
+
+		Returns:
+		--------
+		page : Any
+			Returns a twitter homepage where the search can be starteds
+		'''
+
 		context = None
 
 		try:
@@ -66,6 +94,19 @@ class TwitterScraper(IScraper):
 				logging.error(f"An error occurred: {str(e)}")
 	
 	async def _link_gatherer(self, page):
+		'''
+		A method used to gather links from the Twitter page based on a specified keyword
+
+		Parameters:
+		-----------
+		page: Any
+			Page object representing the twitter page to scrape
+
+		Returns:
+		links : [str]
+			A list of gathered tweet URL's
+		'''
+
 		links = []
 
 		search_selector_id = '[data-testid="SearchBox_Search_Input"]'
@@ -74,13 +115,6 @@ class TwitterScraper(IScraper):
 		await page.keyboard.press('Enter')
 
 		logger.debug("Entered search query : %s", search_query)
-
-		# cookies_button = await page.get_by_text("Refuse non-essential cookies")
-		# if cookies_button:
-		# 	await cookies_button.click()
-		# 	logger.debug("Clicked on cookie button")
-		# else:
-		# 	logger.debug("No cookie button found")
 
 		async def extract_links(page):
 			#Using JS in the page.evaluate function
@@ -93,6 +127,12 @@ class TwitterScraper(IScraper):
 			links = await page.evaluate(js_extract_links)
 			return links
 		
+		
+		#####################################################################################################
+		# We collect links while scrolling since Twitter uses a script that only loads 7 tweets at all times.
+		# By scrolling while gathering links we ensure we end up with >7 links.
+		#####################################################################################################
+
 		_prev_height = -1
 		_max_scrolls = 20
 		_scroll_count = 0
@@ -100,12 +140,7 @@ class TwitterScraper(IScraper):
 			await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
 			await page.wait_for_timeout(1000)
 
-			# anchor_tags = await page.query_selector_all('a')
-			# logger.debug(f"Anchor tags: {anchor_tags}")
-			# logger.debug("Found %d anchor tags", len(anchor_tags))
-			# logger.debug(f"Anchor tags: {anchor_tags}")
 			current_links = await extract_links(page)
-			# logger.debug("Found links: %s", current_links)
 			for href in current_links:
 					regex = r'https?://(www\.)?x\.com/[A-Za-z0-9_]+/status/[0-9]+$'
 					if href and re.match(regex, href):
@@ -129,9 +164,12 @@ class TwitterScraper(IScraper):
 		logger.debug("Page closed")
 			
 		logger.debug("Final links collected: %s", links)	
-		return list(set(links))
+		return list(set(links)) #Using set to ensure we have no duplicates
 
-	
+	#############################################################################
+	# This function is no longer in use, but I just wanted to show the algorithm.	
+	#############################################################################
+
 	async def _scraper(self, browser, links):
 		results = []
 		contexts = []
@@ -267,6 +305,19 @@ class TwitterScraper(IScraper):
 		return results
 	
 	async def _api_implementation(self, links):
+		'''
+		Fetches tweet details based on the undocumented embedding API
+
+		Parameters:
+		-----------
+		links: []
+			A list of tweet URL's to fetch details for
+
+		Returns:
+		--------
+		tweets : [{}]
+			A list of dicts (tweet data) ready for DB insertion
+		'''
 		async def _fetch_single_tweet(session, link):
 			try:
 				url = (re.match(r'https?://(www\.)?x\.com(/[A-Za-z0-9_]+/status/[0-9]+)$', link)).group(2)
@@ -323,6 +374,19 @@ class TwitterScraper(IScraper):
 
 
 	async def scrape(self, post_repo: IPostRepository):
+		'''
+		This function combines all of the previous declared functions, allowing the frontend to call this function and get the expected result
+
+		Parameters:
+		-----------
+		post_repo: IPostRepository
+			Used to implement repo structure to enforce data access layer seperated from business logic
+
+		Returns:
+		--------
+		post_results : 
+			For now returns tweets as they were inserted into DB
+		'''
 		async with async_playwright() as p:
 			start_time = time.time()
 			browser = await p.chromium.launch(args=['--start-maximized'], headless=False)
