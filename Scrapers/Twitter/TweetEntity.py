@@ -21,24 +21,18 @@ class Tweet:
         string representation of timestamp/date
     upvotes : str
         Count of likes
-    views : str
-        Count of views
-    reposts : str
-        Count of reposts
     origin : str = "Twitter"
         Platform where the data has been gathered from
 
     
     '''
-    def __init__(self, _id: str, url: str, title: str, description: str, time: str, upvotes: str, views: str, reposts: str, origin: str ="Twitter"):
+    def __init__(self, _id: str, url: str, title: str, description: str, time: str, upvotes: str, origin: str ="Twitter"):
         self._id = _id
         self.url = url
         self.title = title
         self.description = description
         self.time = time
         self.upvotes = upvotes
-        self.views = views
-        self.reposts = reposts
         self.origin = origin
 
     def to_doc(self):
@@ -58,7 +52,5 @@ class Tweet:
             "description": self.description,
             "time": self.time,
             "upvotes": self.upvotes,
-            "views": self.views,
-            "reposts": self.reposts,
             "origin": self.origin
             }

@@ -265,8 +265,6 @@ class TwitterScraper(IScraper):
 										description=tweet_content_with_emoji, 
 										time=tweet_date, 
 										upvotes=tweet_likes,
-										views=tweet_views, 
-										reposts=tweet_reposts 
 										)
 						
 							await page.close()
@@ -285,8 +283,6 @@ class TwitterScraper(IScraper):
 								title='',
 								description='',
 								time='',
-								upvotes='',
-								views='',
 								reposts=''
 								)
 							await page.close()
@@ -334,8 +330,6 @@ class TwitterScraper(IScraper):
 						tweet_content = tweet_data.get('text', '')
 						tweet_date = tweet_data.get('created_at', '')
 						tweet_likes = tweet_data.get('favorite_count', '')
-						tweet_views = tweet_data.get('view_count', '')
-						tweet_reposts = tweet_data.get('retweet_count', '')
 
 						tweet = Tweet(
 							_id=tweet_id, 
@@ -343,9 +337,7 @@ class TwitterScraper(IScraper):
 							title='',
 							description=tweet_content,
 							time=tweet_date,
-							upvotes=tweet_likes,
-							views=tweet_views,
-							reposts=tweet_reposts)
+							upvotes=tweet_likes)
 						return tweet.to_doc()
 					else:
 						logger.debug(f"Failed to retrieve data for {link}: {response.status}")
