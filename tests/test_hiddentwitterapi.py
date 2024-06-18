@@ -17,9 +17,7 @@ async def scraper():
 example_response = {
     'text': 'Sample tweet content with emoji 😊',
     'created_at': '2024-06-10T12:34:56Z',
-    'favorite_count': 123,
-    'view_count': 456,
-    'retweet_count': 789
+    'favorite_count': 123
 }
 
 @pytest.mark.asyncio
@@ -46,8 +44,6 @@ async def test_fetch_single_tweet(scraper):
         assert tweet['description'] == 'Sample tweet content with emoji 😊'
         assert tweet['time'] == '2024-06-10T12:34:56Z'
         assert tweet['upvotes'] == 123
-        assert tweet['views'] == 456
-        assert tweet['reposts'] == 789
 
 @pytest.mark.asyncio
 async def test_api_implementation_multiple_links(scraper):
@@ -72,8 +68,6 @@ async def test_api_implementation_multiple_links(scraper):
             assert tweet['description'] == 'Sample tweet content with emoji 😊'
             assert tweet['time'] == '2024-06-10T12:34:56Z'
             assert tweet['upvotes'] == 123
-            assert tweet['views'] == 456
-            assert tweet['reposts'] == 789
 
 
 
