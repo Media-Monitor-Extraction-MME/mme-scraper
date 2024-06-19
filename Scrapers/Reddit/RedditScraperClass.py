@@ -129,13 +129,10 @@ class RedditScraper(IScraper):
                 A dictionary containing the mapped post data.
             """
             mapping = {
-                'data-fullname': '_id',
+                'data-fullname': 'postID',
                 'data-timestamp': 'time',
                 'data-permalink': 'url',
-                'data-score': 'upvotes',
-                'data-fullname': '_id',
-                'data-timestamp': 'time',
-                'data-permalink': 'url'
+                'data-score': 'upvotes'
                 }
             
             ## check if ad and skips if true
@@ -152,9 +149,6 @@ class RedditScraper(IScraper):
                 timestamp_seconds = int(post['timestamp']) / 1000
                 dt = datetime.datetime.fromtimestamp(timestamp_seconds)
                 post['timestamp'] = dt
-                
-            if post['_id']:
-                post['_id'] = await self.generate_id(post['_id'])
             
             return post
         
@@ -171,7 +165,7 @@ class RedditScraper(IScraper):
                 A dictionary containing the post data. 
             """
             post = {
-                '_id':None,
+                'postID':None,
                 'url': None,
                 'title': '',
                 'description': '',
