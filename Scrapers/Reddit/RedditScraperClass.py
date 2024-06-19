@@ -28,7 +28,7 @@ class RedditScraper(IScraper):
         self.query = query
 
     #Methods
-    async def subreddit_scrape(self, browser) -> list:
+    async def _subreddit_scrape(self, browser) -> list:
         """
         Scrapes the subreddits related to a query (community search, search query).
 
@@ -105,7 +105,7 @@ class RedditScraper(IScraper):
         
         return object_id
     
-    async def post_scrape(self, forums, browser) -> dict:
+    async def _post_scrape(self, forums, browser) -> dict:
         """
         Scrapes the posts in a subreddit.
         
@@ -173,14 +173,8 @@ class RedditScraper(IScraper):
             post = {
                 '_id':None,
                 'url': None,
-                '_id':None,
-                'url': None,
                 'title': '',
                 'description': '',
-                'time': None,
-                'upvotes': None,
-                'views': None,
-                'reposts': None,
                 'time': None,
                 'upvotes': None
             }
@@ -219,7 +213,7 @@ class RedditScraper(IScraper):
         scraped_posts = await launch_contexts(browser, forums)
         return scraped_posts
 
-    async def content_scrape(self, posts, browser) -> dict:
+    async def _content_scrape(self, posts, browser) -> dict:
         """
         Scrapes the content of a Reddit post, specifically the comments.
         
@@ -265,7 +259,6 @@ class RedditScraper(IScraper):
         
         async def load_pages(page, post):
             await page.goto(f"https://old.reddit.com/{post['perma_link']}", wait_until='domcontentloaded')
-            #get description
             #get description
             await page.wait_for_load_state('load')
             comment_data = await page.evaluate("""
@@ -356,9 +349,9 @@ class RedditScraper(IScraper):
 
             self.query = keyword
             
-            subreddits = await self.subreddit_scrape(browser=browser)
-            posts = await self.post_scrape(forums=subreddits, browser=browser)
+            subreddits = await self._subreddit_scrape(browser=browser)
+            posts = await self._post_scrape(forums=subreddits, browser=browser)
             if posts:
-                comments = await self.content_scrape(posts=posts, browser=browser)
+                comments = await self._content_scrape(posts=posts, browser=browser)
             
             return posts, comments
