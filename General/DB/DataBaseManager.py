@@ -52,6 +52,19 @@ class DBManager(IDBManager):
         if document and not returnID:
             document.pop("_id", None)
         return document
+    
+    async def get_documents(self, collection: str, filter: Dict[str, Any], returnID: bool = False) -> Dict[str, Any]:
+        """
+        Retrieve a single document based on a filter.
+        
+        Optionally includes the document's ID.
+        """
+        documents = await self.db[collection].find(filter).to_list(length=100)
+        for document in documents:
+            print(document)
+            if document and not returnID:
+                document.pop("_id", None)
+        return documents
 
     async def get_document_ids(self, collection: str, filter: Dict[str, Any]) -> List[Any]:
         """

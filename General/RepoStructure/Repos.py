@@ -10,6 +10,14 @@ from .IRepos import *
 
 from typing import Any
 
+class TaskRepo(ITaskRepository):
+    def __init__(self, db: IDBManager, collection: str):
+        self.db = db
+        self.collection = collection
+
+    #Methods
+    async def get_tasks(self, filter: dict) -> Any:
+        return await self.db.get_documents(self.collection, filter)
 class CommentRepo(ICommentRepository):    
     def __init__(self, db: IDBManager, collection: str):
         self.db = db
