@@ -37,7 +37,7 @@ def side_effect_values(js_values):
 
 @pytest_asyncio.fixture
 async def scraper():
-    return TwitterScraper(link_gather_account_username="DemoSprint4", link_gather_account_password="TestingTest", keyword="TestKeyword")
+    return TwitterScraper(link_gather_account_username="DemoSprint4", link_gather_account_password="TestingTest", keywords=["TestKeyword"])
 
 @pytest.mark.asyncio
 async def test_link_gatherer_typing_and_search(scraper):
