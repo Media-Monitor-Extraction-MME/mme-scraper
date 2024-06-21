@@ -360,6 +360,7 @@ class TwitterScraper(IScraper):
 				tweets.extend([result for result in results if results is not None])
 
 				tasks.clear()
+				asyncio.sleep(1)
 
 		logger.debug(tweets)
 		return tweets
@@ -381,7 +382,7 @@ class TwitterScraper(IScraper):
 		'''
 		async with async_playwright() as p:
 			start_time = time.time()
-			browser = await p.chromium.launch(args=['--start-maximized'], headless=False)
+			browser = await p.firefox.launch(args=['--start-maximized'])
 
 			page = await self._login_account(browser=browser)
 			if page is None:
