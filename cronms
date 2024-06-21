@@ -1,4 +1,4 @@
 # */10 * * * * cd /home/appuser && /home/appuser/.venv/bin/python /home/appuser/testmain.py >> /home/appuser/logs.log 2>&1
-*/10 * * * * cd /home/appuser && /home/appuser/.venv/bin/python /home/appuser/recent_posts.py >> /home/appuser/logs.log 2>&1
+*/50 * * * * cd /home/appuser && /home/appuser/.venv/bin/python /home/appuser/recent_posts.py >> /home/appuser/logs.log 2>&1
 # */1 * * * * /usr/local/bin/python --version >> /home/appuser/logs.log 2>&1
 #empty line
