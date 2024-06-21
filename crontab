@@ -1,3 +1,0 @@
-SHELL=/bin/bash
-PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin 
-* * * * * /bin/bash -c 'cd /home/appuser; python -c "import datetime; print(f\"🩷 HeartBeat ⏱️ {datetime.datetime.now()}\")" >> /var/log/cron.log 2>&1'
