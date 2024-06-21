@@ -125,6 +125,7 @@ class TwitterScraper(IScraper):
 
 		search_selector_id = '[data-testid="SearchBox_Search_Input"]'
 		search_query = f"{keyword} {filter}"
+		await page.locator(search_selector_id).press("Control+A")
 		await page.type(search_selector_id, search_query, delay=150)
 		await page.keyboard.press('Enter')
 
@@ -409,7 +410,7 @@ class TwitterScraper(IScraper):
 		'''
 		async with async_playwright() as p:
 			start_time = time.time()
-			browser = await p.firefox.launch(args=['--start-maximized'])
+			browser = await p.firefox.launch(args=['--start-maximized'], headless=False)
 
 			
 			page = await self._login_account(browser=browser)
