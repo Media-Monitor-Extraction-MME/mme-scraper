@@ -26,15 +26,7 @@ import asyncio
 import time
 import json
 
-# for handler in logging.root.handlers[:]:
-#     logging.root.removeHandler(handler)
-# logging.basicConfig(filename="logs.log")
-# console = logging.StreamHandler()
-# console.setLevel(logging.INFO)
-# logging.getLogger().addHandler(console)
-
-# logging.info("info")
-# logging.warning("warning")
+#  
 
 async def run_reddit(redditscraper):
     async with async_playwright() as p:
@@ -129,7 +121,7 @@ async def main():
     # for keyword in keywords:
     logging.info(f"Keywords: {keywords}")
     twitterscraper = TwitterScraper(username, password, keywords)
-    twitter_tasks.append(twitterscraper.scrape(post_repo=post_repo))
+    twitter_tasks.append(twitterscraper.scrape(post_repo=post_repo, filter="within_time:1h min_faves:50"))
 
     await asyncio.gather(*twitter_tasks)
     # all_twitter_data = await asyncio.gather(*twitter_tasks)

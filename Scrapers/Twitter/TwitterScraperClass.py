@@ -32,13 +32,13 @@ class TwitterScraper(IScraper):
 		Username for twitter account used for link gathering
 	link_gather_account_password : str
 		Password for twitter account used for link gathering
-	keyword : str
-		Keyword used for search query
+	keywords : [str]
+		Keywords used for search query
 	'''
-	def __init__(self, link_gather_account_username, link_gather_account_password, keyword):
+	def __init__(self, link_gather_account_username, link_gather_account_password, keywords):
 		self.link_gather_account_username = link_gather_account_username
 		self.link_gather_account_password = link_gather_account_password
-		self.keyword = keyword
+		self.keywords = keywords
 
 
 	async def _login_account(self, browser):
@@ -93,7 +93,21 @@ class TwitterScraper(IScraper):
 		except (asyncio.TimeoutError, Exception) as e:
 				logging.error(f"An error occurred: {str(e)}")
 	
-	async def _link_gatherer(self, page):
+	async def _logout(self, page):
+		'''
+		A method to logout of the twitter account
+
+		Parameters:
+		-----------
+		page: Any
+			Page object representing the twitter page to logout from
+		'''
+		await page.goto('https://twitter.com/logout')
+		logger.debug("Navigated to logout")
+		await page.close()
+		logger.debug("Page closed")
+  
+	async def _link_gatherer(self, page, keyword: string, filter: string = "min_faves:500 since:2024-01-01"):
 		'''
 		A method used to gather links from the Twitter page based on a specified keyword
 
@@ -110,7 +124,8 @@ class TwitterScraper(IScraper):
 		links = []
 
 		search_selector_id = '[data-testid="SearchBox_Search_Input"]'
-		search_query = f"{self.keyword} min_faves:500 since:2024-01-01"
+		search_query = f"{keyword} {filter}"
+		await page.locator(search_selector_id).press("Control+A")
 		await page.type(search_selector_id, search_query, delay=150)
 		await page.keyboard.press('Enter')
 
@@ -127,11 +142,25 @@ class TwitterScraper(IScraper):
 			links = await page.evaluate(js_extract_links)
 			return links
 		
-		
 		#####################################################################################################
 		# We collect links while scrolling since Twitter uses a script that only loads 7 tweets at all times.
 		# By scrolling while gathering links we ensure we end up with >7 links.
 		#####################################################################################################
+		
+  	# Needed to execute beforehand because won't collect links if page to small.
+		await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+		await page.wait_for_timeout(1000)
+
+		current_links = await extract_links(page)
+		for href in current_links:
+				regex = r'https?://(www\.)?x\.com/[A-Za-z0-9_]+/status/[0-9]+$'
+				if href and re.match(regex, href):
+					links.append(href)
+
+		
+		logger.debug("Links collected so far: %s", links)
+  
+		await asyncio.sleep(5)
 
 		_prev_height = -1
 		_max_scrolls = 20
@@ -158,10 +187,10 @@ class TwitterScraper(IScraper):
 			logger.debug("Scroll count: %d", _scroll_count)
 		await asyncio.sleep(5)
 
-		await page.goto('https://twitter.com/logout')
-		logger.debug("Navigated to logout")
-		await page.close()
-		logger.debug("Page closed")
+		# await page.goto('https://twitter.com/logout')
+		# logger.debug("Navigated to logout")
+		# await page.close()
+		# logger.debug("Page closed")
 			
 		logger.debug("Final links collected: %s", links)	
 		return list(set(links)) #Using set to ensure we have no duplicates
@@ -365,7 +394,7 @@ class TwitterScraper(IScraper):
 		return tweets
 
 
-	async def scrape(self, post_repo: IPostRepository):
+	async def scrape(self, post_repo: IPostRepository, filter: string = None):
 		'''
 		This function combines all of the previous declared functions, allowing the frontend to call this function and get the expected result
 
@@ -381,13 +410,22 @@ class TwitterScraper(IScraper):
 		'''
 		async with async_playwright() as p:
 			start_time = time.time()
-			browser = await p.chromium.launch(args=['--start-maximized'], headless=False)
+			browser = await p.firefox.launch(args=['--start-maximized'], headless=False)
 
+			
 			page = await self._login_account(browser=browser)
 			if page is None:
 				logging.error("Page is none")
 
-			links = await self._link_gatherer(page=page)
+			links = []
+			for keyword in self.keywords:
+				if filter:
+						logging.info(f"Filtering tweets based on: {filter}")
+						links.extend(await self._link_gatherer(page=page, keyword=keyword, filter=filter))
+				else:
+						links.extend(await self._link_gatherer(page=page, keyword=keyword))
+			await self._logout(page=page)
+			logging.info(links)
 			#twitterdata = await self.scraper(browser=browser, links=links)
 			end_time_links = time.time()
 			total_time_links = end_time_links - start_time
@@ -405,7 +443,8 @@ class TwitterScraper(IScraper):
 
 			end_time = time.time()
 			total_time = end_time - start_time
-			print(f'{self.keyword}: {links_len} tweets scraped in {total_time} seconds.\nLink Gathering took: {total_time_links}\nAPI Calls took: {total_time_api}\nPushing to DB via Repo took: {total_time_repo}')
+			for keyword in self.keywords:
+				logging.info(f'{keyword}: {links_len} tweets scraped in {total_time} seconds.\nLink Gathering took: {total_time_links}\nAPI Calls took: {total_time_api}\nPushing to DB via Repo took: {total_time_repo}')
 			await browser.close()
 
 		return post_results

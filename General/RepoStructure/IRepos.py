@@ -5,7 +5,10 @@ Contains all interfaces for the repo structure
 #Imports
 from abc import ABC, abstractmethod
 
-
+class ITaskRepository(ABC):
+    @abstractmethod
+    def get_tasks(document):
+        pass
 class ICommentRepository(ABC):
     @abstractmethod
     def add_comment(document):

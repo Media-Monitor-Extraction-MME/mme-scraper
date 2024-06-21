@@ -11,7 +11,7 @@ from Scrapers.Twitter.TwitterScraperClass import TwitterScraper
 
 @pytest_asyncio.fixture
 async def scraper():
-    return TwitterScraper(link_gather_account_username="DemoSprint4", link_gather_account_password="TestingTest", keyword="TestKeyword")
+    return TwitterScraper(link_gather_account_username="DemoSprint4", link_gather_account_password="TestingTest", keywords=["TestKeyword"])
 
 @pytest.mark.asyncio
 async def test_login_browser_success(scraper):

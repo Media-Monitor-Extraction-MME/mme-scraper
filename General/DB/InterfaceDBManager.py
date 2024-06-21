@@ -50,7 +50,21 @@ class IDBManager(ABC):
             Dict[str, Any]: The document matching the criteria.
         """
         pass
+    @abstractmethod
+    def get_documents(self, collection: str, filter: Dict[str, Any], returnID: bool = False) -> List[Dict[str, Any]]:
+        """
+        Retrieve a single document from a collection based on a filter.
 
+        Args:
+            collection (str): Name of the collection.
+            filter (Dict[str, Any]): Criteria for selecting the document.
+            returnID (bool): Whether to return the document's ID.
+
+        Returns:
+            List[Dict[str, Any]]: The document matching the criteria.
+        """
+        pass
+    
     @abstractmethod
     def get_document_ids(self, collection: str, filter: Dict[str, Any]) -> List[Any]:
         """

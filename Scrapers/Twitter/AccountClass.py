@@ -73,7 +73,7 @@ class Account:
         All needed data to generate an account on Twitter(X)
         '''
         date = datetime.date.today()
-        current_year = date.year()
+        current_year = date.year
 
         names_location = "account_data/names.txt"
         with open(names_location, 'r') as file:
@@ -94,7 +94,8 @@ class Account:
 
         return first_name, last_name, username, password, birthday, email
 
-    async def create_account(self, context):
+    @staticmethod
+    async def create_account(context):
         '''
         Script-like method to create an account on Twitter(X) for a certain route
 
@@ -107,15 +108,9 @@ class Account:
         --------
         Writes account credentials to file after creation
         '''
-        first_name, last_name, username, password, date_of_birth, email = await self.random_credentials_generator(context)
-        self.first_name = first_name
-        self.last_name = last_name
-        self.username = username
-        self.password = password
-        self.date_of_birth = date_of_birth
-        self.email = email
+        first_name, last_name, username, password, date_of_birth, email = await Account.random_credentials_generator(context)
 
-        birth_day, birth_month, birth_year = self.date_of_birth.split('-')
+        birth_day, birth_month, birth_year = date_of_birth.split('-')
 
         async with async_playwright():
             page = await context.new_page()
@@ -130,13 +125,13 @@ class Account:
 
             asyncio.sleep(0.5)
 
-            await page.type(username_selector, self.username, delay=150)
+            await page.type(username_selector, username, delay=150)
             await page.evaluate(f'''() => {{
             const element = document.querySelector("{username_selector}");
             if (element) element.blur();
             }}''')
             asyncio.sleep(0.5)
-            await page.type(email_selector, self.email, delay=150)
+            await page.type(email_selector, email, delay=150)
             await page.evaluate(f'''() => {{
             const element = document.querySelector("{email_selector}");
             if (element) element.blur();
