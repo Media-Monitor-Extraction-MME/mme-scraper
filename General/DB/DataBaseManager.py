@@ -77,6 +77,10 @@ class DBManager(IDBManager):
         """
         Insert new documents and return their IDs. Updates duplicates if they exist.
         """
+        if not newdoc:
+            print("No documents to insert or update (empty list)")
+            return []
+        
         id_list = []
         for doc in newdoc:
             id = doc["_id"]
@@ -92,14 +96,26 @@ class DBManager(IDBManager):
         newdoc_filtered = [d for d in newdoc if d['_id'] not in ids_to_remove]
         newdoc_updates = [d for d in newdoc if d['_id'] in ids_to_remove]
 
-        result = await self.db[collection].insert_many(newdoc_filtered, session=session)
-        updates_count = 0
-        for doc in newdoc_updates:
-            filter = {'_id' : doc['_id']}
-            new_values = {'$set': doc}
-            await self.db[collection].update_one(filter, new_values, session=session)
-            updates_count += 1
-        print(f"{len(result.inserted_ids)} documents inserted.")
-        print(f"{updates_count} documents updated.")
+        inserted_ids = []
+        try:
+            if newdoc_filtered:
+                result = await self.db[collection].insert_many(newdoc_filtered, session=session)
+                inserted_ids = result.inserted_ids
+                print(f"{len(result.inserted_ids)} documents inserted.")
+            else:
+                print("No new docs to insert")
 
-        return result.inserted_ids
+            updates_count = 0
+            for doc in newdoc_updates:
+                filter = {'_id' : doc['_id']}
+                new_values = {'$set': doc}
+                await self.db[collection].update_one(filter, new_values, session=session)
+                updates_count += 1
+            print(f"{updates_count} documents updated.")
+
+        except TypeError as te:
+            print(f"TypeError: {te}. Ensure docs are a non-empty list")
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+
+        return inserted_ids
