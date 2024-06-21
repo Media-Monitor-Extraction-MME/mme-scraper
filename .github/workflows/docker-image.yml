@@ -6,11 +6,11 @@ name: Docker
 # documentation.
 
 on:
-  pull_request:
-    types: [closed]
-    branches: ['docker']
+  # pull_request:
+  #   types: [closed]
+  #   branches: ['docker']
   push:
-    branches: ['dev', 'v*', 'v*.*.*']
+    branches: ['docker', 'v*', 'v*.*.*']
     # Publish semver tags as releases.
     tags: ['v*.*.*']
 jobs:
