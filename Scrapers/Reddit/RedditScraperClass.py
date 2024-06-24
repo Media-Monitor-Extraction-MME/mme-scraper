@@ -162,6 +162,16 @@ class RedditScraper(IScraper):
         
         #Initialize every subreddit in batches of 3
         async def launch_contexts(browser, forums):
+            """
+            Launches multiple browser contexts to scrape the comments in parallel.
+            
+            Args:
+                @browser: The Playwright browser instance.
+                @posts: The list of post dictionaries.
+                
+            Returns:
+                A list of dictionaries containing the comments of the posts.
+            """
             contexts = await asyncio.gather(*(browser.new_context() for _ in range(5)))
             for i in range(0, len(forums), 3):
                 batch = forums[i:i+3]
@@ -174,6 +184,17 @@ class RedditScraper(IScraper):
             return tasks_results[0]
         
         async def load_pages(page, subreddit):
+            """
+            Loads the Reddit post pages and extracts the comments using a javascript eval.
+            
+            Args:
+                @page: The Playwright page object.
+                @subreddit: The subreddit to scrape.
+                
+            Returns:
+                A list of dictionaries containing the posts of the subreddit.
+            
+            """
             await page.goto(f"https://old.reddit.com/{subreddit}", wait_until='domcontentloaded')
             await page.wait_for_load_state('load')
             elements = await page.query_selector_all('div[data-fullname]')    
@@ -195,18 +216,18 @@ class RedditScraper(IScraper):
         Returns:
             A dictionary containing the title, upvotes, description, and comments of the Reddit post.
         """
-        comments_data = []
-        async def generate_id(id: str) -> ObjectId:
-            """
-            Generates a unique ID for a comment.
-            
-            Returns:
-                (str): The generated ID.
-            """
-            
-            return ObjectId()
-
         async def process_comments(comments, post_id, level=0):
+            """
+            Helper function for load_pages, processes the comments recursively which handles the comment thread structure.
+            
+            Args:
+                @comments: The comments to process.
+                @post_id: The ID of the post.
+                @level: The level of the comment in the thread.
+                
+            Returns:
+                A list of dictionaries containing the processed comments.
+            """
             # Recursively process comments and generate unique IDs for each comment
             processed_comments = []
             
@@ -229,6 +250,17 @@ class RedditScraper(IScraper):
             return processed_comments
         
         async def load_pages(page, post):
+            """
+            Loads the Reddit post pages and extracts the comments using a javascript eval.
+            
+            Args:
+                @page: The Playwright page object.
+                @post: The post dictionary.
+                
+            Returns:
+                A list of dictionaries containing the comments of the post.
+            
+            """
             await page.goto(f"https://old.reddit.com/{post['url']}", wait_until='domcontentloaded')
             #get description
             await page.wait_for_load_state('load')
@@ -297,6 +329,16 @@ class RedditScraper(IScraper):
             return comments_data  
             
         async def launch_contexts(browser, posts):
+            """
+            Launches multiple browser contexts to scrape the comments in parallel.
+            
+            Args:
+                @browser: The Playwright browser instance.
+                @posts: The list of post dictionaries.
+                
+            Returns:
+                A list of dictionaries containing the comments of the posts.
+            """
             content_scraper_tasks = []
             contexts = await asyncio.gather(*(browser.new_context() for _ in range(5)))
             for i, post in enumerate(posts):
@@ -315,6 +357,15 @@ class RedditScraper(IScraper):
         return comments
       
     async def scrape(self, post_repo: IPostRepository, keyword):
+        """
+        Scrapes Reddit for posts and comments related to a keyword.
+        
+        Args:
+            @keyword: The keyword to search for.
+        
+        Returns:
+            A list of dictionaries containing the scraped post and comment data.
+        """
         async with async_playwright() as p:
             browser = await p.chromium.launch(args=['--start-maximized'], headless=False)
 
