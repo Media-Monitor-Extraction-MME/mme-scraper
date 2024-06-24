@@ -83,27 +83,6 @@ class RedditScraper(IScraper):
         await context.close()
         
         return filtered_subreddits
-
-    async def generate_id(self, string: str) -> ObjectId:
-        """
-        Generates a unique ID from a string.
-        
-        Args:
-            @string: The string to generate an ID from.
-        
-        Returns:
-            (str): The generated ID.
-        """
-        # Hash the input string using SHA-1
-        hash_object = hashlib.sha1(string.encode())
-        
-        # Take the first 12 bytes of the hash
-        objectid_hex = hash_object.hexdigest()[:24]
-        
-        # Create an ObjectId from the hex string
-        object_id = ObjectId(objectid_hex)
-        
-        return object_id
     
     async def _post_scrape(self, forums, browser) -> dict:
         """
@@ -114,7 +93,7 @@ class RedditScraper(IScraper):
             @browser: Playwright browser instance
         
         Returns:
-            A list of dictionaries containing post data(id,title,source,upvotes,desc,url,timestamp) in the subreddit.
+            A list of dictionaries containing post data(id,title,source,upvotes,desc,url,time) in the subreddit.
         """
         #Helper Function
         async def map_post(post, attributes):
@@ -130,7 +109,7 @@ class RedditScraper(IScraper):
             """
             mapping = {
                 'data-fullname': 'postID',
-                'data-timestamp': 'timestamp',
+                'data-timestamp': 'time',
                 'data-permalink': 'url',
                 'data-score': 'upvotes'
                 }
@@ -145,10 +124,10 @@ class RedditScraper(IScraper):
                 if attr['name'] in mapping:
                     post[mapping[attr['name']]] = attr['value']
             
-            if post['timestamp']:
-                timestamp_seconds = int(post['timestamp']) / 1000
+            if post['time']:
+                timestamp_seconds = int(post['time']) / 1000
                 dt = datetime.datetime.fromtimestamp(timestamp_seconds)
-                post['timestamp'] = dt
+                post['time'] = dt
             
             return post
         
@@ -169,7 +148,7 @@ class RedditScraper(IScraper):
                 'url': None,
                 'title': '',
                 'description': '',
-                'timestamp': None,
+                'time': None,
                 'upvotes': None
             }
             attributes = await element.evaluate('el => { return Array.from(el.attributes).map(attr => ({name: attr.name, value: attr.value})); }')

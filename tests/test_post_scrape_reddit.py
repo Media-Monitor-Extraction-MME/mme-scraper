@@ -1,87 +1,69 @@
 import pytest
 import pytest_asyncio
-import os, sys
-import asyncio
-from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+import os,sys
+from unittest.mock import AsyncMock, MagicMock
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from Scrapers.Reddit.RedditScraperClass import RedditScraper
 
 @pytest.fixture
-def mock_launch_contexts():
-    return AsyncMock()
+def mock_nodelist():
+    # Create mock elements
+    mock_element1 = MagicMock()
+    mock_element2 = MagicMock()
 
-@pytest.fixture
-def mock_process_element():
-    return AsyncMock()
+    # Mock the evaluate method for each element
+    mock_element1.evaluate = AsyncMock(return_value=[
+        {'name': 'data-fullname', 'value': 't3_1'},
+        {'name': 'data-timestamp', 'value': '1609459200000'},  # January 1, 2021
+        {'name': 'data-permalink', 'value': '/r/test/comments/1'},
+        {'name': 'data-score', 'value': '100'}
+    ])
+    mock_element2.evaluate = AsyncMock(return_value=[
+        {'name': 'data-fullname', 'value': 't3_2'},
+        {'name': 'data-timestamp', 'value': '1609459200000'},  # January 1, 2021
+        {'name': 'data-permalink', 'value': '/r/test/comments/2'},
+        {'name': 'data-score', 'value': '200'}
+    ])
 
-@pytest.fixture
-def mock_element():
-    return MagicMock()
+    # Mock the inner_text method for title and description
+    mock_element1.query_selector = AsyncMock(return_value=AsyncMock(inner_text=AsyncMock(return_value="Mock Title 1")))
+    mock_element2.query_selector = AsyncMock(return_value=AsyncMock(inner_text=AsyncMock(return_value="Mock Title 2")))
+    
+    mock_element1.query_selector.side_effect = lambda selector: AsyncMock(inner_text=AsyncMock(return_value="Mock Description 1")) if "usertext-body" in selector else AsyncMock(inner_text=AsyncMock(return_value="Mock Title 1"))
+    mock_element2.query_selector.side_effect = lambda selector: AsyncMock(inner_text=AsyncMock(return_value="Mock Description 2")) if "usertext-body" in selector else AsyncMock(inner_text=AsyncMock(return_value="Mock Title 2"))
 
-@pytest.fixture
-def mock_forums():
-    return ["r/test", "r/test2", "r/test3"]
+    # Create the mock NodeList
+    mock_nodelist = [mock_element1, mock_element2]
+
+    return mock_nodelist
 
 @pytest.mark.asyncio
-async def test_post_scrape(mock_process_element, mock_element, mock_forums):
-    mock_posts = [
-                {
-                '_id': 1,
-                'url': "https://old.reddit.com/r/test/comments/1",
-                'title': "Test Post 1",
-                'description': "This is a test post",
-                'timestamp': datetime(2024, 1, 1),
-                'upvotes': 100},
-                {
-                '_id': 2,
-                'url': "https://old.reddit.com/r/test/comments/2",
-                'title': "Test Post 2",
-                'description': "This is another test post",
-                'timestamp': datetime(2024, 1, 1),
-                'upvotes': 200
-            }
-                ]
-    
-    def query_selector_side_effect(selector):
-        if 'title' in selector:
-            mock = AsyncMock()
-            mock.inner_text = "Mock Title"
-            return mock
-        elif 'usertext-body' in selector:
-            mock = AsyncMock()
-            mock.inner_text = "Mock Description"
-            return mock
-        else:
-            return None
-            
+async def test_post_scrape(mock_nodelist):
+    mock_forums = ["r/test", "r/test2", "r/test3"]
     mock_browser = AsyncMock()
     mock_context = AsyncMock()
     mock_page = AsyncMock()
-    mock_element = AsyncMock()
-    mock_launch_contexts = AsyncMock()
-    
+
     mock_browser.new_context.return_value = mock_context
     mock_context.new_page.return_value = mock_page
 
     mock_page.goto.return_value = None
     mock_page.wait_for_load_state.return_value = None
-    mock_page.query_selector_all.return_value = [mock_element]
-    mock_page.query_selector.side_effect = query_selector_side_effect
-    mock_process_element.return_value = mock_posts
-    mock_element.evaluate.return_value = AsyncMock()
-    scraper = RedditScraper(query='test')
-    with patch.object(scraper, '_post_scrape', new=mock_process_element):
-        result =  await scraper._post_scrape(forums=mock_forums, browser=mock_browser)
+    mock_page.query_selector_all.return_value = mock_nodelist
+
+    scraper = RedditScraper(query="test")
+
+    result = await scraper._post_scrape(forums=mock_forums, browser=mock_browser)
     
-    mock_launch_contexts.assert_called_once_with(forums=mock_forums,browser=mock_browser,return_value=mock_posts)
-    
-# Assert that the expected methods were called on the mock objects
-    mock_process_element.assert_called_with(mock_page, mock_element)
-    
+    # Assert that the expected methods were called on the mock objects
+    mock_page.goto.assert_any_call("https://old.reddit.com/r/test", wait_until='domcontentloaded')
+    mock_page.goto.assert_any_call("https://old.reddit.com/r/test2", wait_until='domcontentloaded')
+    mock_page.goto.assert_any_call("https://old.reddit.com/r/test3", wait_until='domcontentloaded')
+    mock_page.wait_for_load_state.assert_called_with("load")
+    mock_page.query_selector_all.assert_called_with('div[data-fullname]')
+
     assert result is not None, "Result should not be None"
     assert isinstance(result, list), "Result should be a list of posts"
-    assert result == mock_posts, "Result should be the same as the mock post"    
-        
-    
-    
+    assert len(result) == 2, "Result should contain 2 posts"
+    assert result[0]['postID'] == 't3_1'
+    assert result[1]['postID'] == 't3_2'
