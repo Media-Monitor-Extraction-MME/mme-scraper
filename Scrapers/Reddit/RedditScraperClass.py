@@ -6,7 +6,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 #Imports
 #from .ForumEntity import Forum
 #from ForumEntity import Forum
-#from PostEntity import Post
+#from postEntity import post
 #from CommentEntity import Comment
 
 from playwright.async_api import async_playwright
@@ -231,7 +231,7 @@ class RedditScraper(IScraper):
             return processed_comments
         
         async def load_pages(page, post):
-            await page.goto(f"https://old.reddit.com/{post['perma_link']}", wait_until='domcontentloaded')
+            await page.goto(f"https://old.reddit.com/{post['url']}", wait_until='domcontentloaded')
             #get description
             await page.wait_for_load_state('load')
             comment_data = await page.evaluate("""
@@ -291,9 +291,9 @@ class RedditScraper(IScraper):
                     })()
                     """)
             
-            description = await page.query_selector('.usertext.usertext-body')
-            posts['description'] = await description.inner_text() if description else None
-            comments_data = await process_comments(comment_data, post['_id'])
+            description = await (await page.query_selector('.usertext.usertext-body')).inner_text()
+            post['description'] = description
+            comments_data = await process_comments(comment_data, post['postID'])
             #comments = [comment for sublist in comments_data for comment in sublist if comment is not None]
 
             return comments_data  
