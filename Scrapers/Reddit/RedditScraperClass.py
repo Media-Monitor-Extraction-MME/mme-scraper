@@ -114,7 +114,7 @@ class RedditScraper(IScraper):
             @browser: Playwright browser instance
         
         Returns:
-            A list of dictionaries containing post data(id,title,source,upvotes,desc,url,time) in the subreddit.
+            A list of dictionaries containing post data(id,title,source,upvotes,desc,url,timestamp) in the subreddit.
         """
         #Helper Function
         async def map_post(post, attributes):
@@ -130,7 +130,7 @@ class RedditScraper(IScraper):
             """
             mapping = {
                 'data-fullname': 'postID',
-                'data-timestamp': 'time',
+                'data-timestamp': 'timestamp',
                 'data-permalink': 'url',
                 'data-score': 'upvotes'
                 }
@@ -169,7 +169,7 @@ class RedditScraper(IScraper):
                 'url': None,
                 'title': '',
                 'description': '',
-                'time': None,
+                'timestamp': None,
                 'upvotes': None
             }
             attributes = await element.evaluate('el => { return Array.from(el.attributes).map(attr => ({name: attr.name, value: attr.value})); }')

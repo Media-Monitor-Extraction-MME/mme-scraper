@@ -1,4 +1,5 @@
 import pytest
+import pytest_asyncio
 import os, sys
 from unittest.mock import AsyncMock
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))

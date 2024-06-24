@@ -108,9 +108,8 @@ async def main():
         logging.error(f"File not found: {fe}")    
 
     # init scrapers
-    # for keyword in keywords:
-    # twitterscraper = TwitterScraper(link_gather_account_username=username, link_gather_account_password=password, keyword=keyword)
-    #redditscraper = RedditScraper(query=keyword)
+    twitterscraper = TwitterScraper(link_gather_account_username=username, link_gather_account_password=password, keyword=keyword)
+    redditscraper = RedditScraper(query=keyword)
 
     # scrape the data
     #twitter_data = await asyncio.gather(
