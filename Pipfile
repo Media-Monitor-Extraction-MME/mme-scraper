@@ -13,8 +13,8 @@ python-dotenv = "*"
 requests = "*"
 pytest = "*"
 pytest-asyncio = "*"
-pytest-playwright = "*"
 aiohttp = "*"
+pytest-playwright = "*"
 
 [dev-packages]
 
