@@ -1,21 +1,19 @@
 '''
 Reddit scraper implementation
 '''
-import sys, os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-#Imports
-#from .ForumEntity import Forum
-#from ForumEntity import Forum
-#from postEntity import post
-#from CommentEntity import Comment
 
-from playwright.async_api import async_playwright
-from bson import ObjectId
-import hashlib
-from InterfaceScraper import IScraper
 import re
 import asyncio
 import datetime
+import sys, os
+from InterfaceScraper import IScraper
+from General.RepoStructure.IRepos import IPostRepository
+
+from InterfaceScraper import IScraper
+from playwright.async_api import async_playwright
+from bson import ObjectId
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 class RedditScraper(IScraper):
     
@@ -316,7 +314,7 @@ class RedditScraper(IScraper):
                 
         return comments
       
-    async def scrape(self, keyword):
+    async def scrape(self, post_repo: IPostRepository, keyword):
         async with async_playwright() as p:
             browser = await p.chromium.launch(args=['--start-maximized'], headless=False)
 
@@ -326,5 +324,10 @@ class RedditScraper(IScraper):
             posts = await self._post_scrape(forums=subreddits, browser=browser)
             if posts:
                 comments = await self._content_scrape(posts=posts, browser=browser)
+            post_results = await asyncio.gather(*[post_repo.add_post(post) for post in posts])
+            comment_results = await asyncio.gather(*[post_repo.add_comment(comment) for comment in comments])
+
+            print(f'Reddit: {len(post_results)} posts scraped.')
+            print(f'Reddit: {len(comment_results)} comments scraped.')
             
-            return posts, comments
+            return post_results, comment_results

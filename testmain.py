@@ -94,8 +94,6 @@ async def main():
     logging.info(keywords)
     username = None
     password = None
-    # keyword = "Trump"
-    # keywords = ['Dua Lipa']
 
     try:
         with open('Scrapers/Twitter/account_data/accounts.txt', 'r') as file:
@@ -111,16 +109,6 @@ async def main():
     twitterscraper = TwitterScraper(link_gather_account_username=username, link_gather_account_password=password, keyword=keyword)
     redditscraper = RedditScraper(query=keyword)
 
-    # scrape the data
-    #twitter_data = await asyncio.gather(
-    #    run_twitter(twitterscraper=twitterscraper)
-        #run_reddit(redditscraper=redditscraper)
-    #)
-    
-    #twitter_data = await asyncio.gather(
-    #    twitterscraper.scrape()
-    #)
-
     logging.info("start scraping...")
     #Twitter testing for multiple keywords:
     post_repo = PostRepo(db=manager, collection="posts")
@@ -131,27 +119,6 @@ async def main():
     twitter_tasks.append(twitterscraper.scrape(post_repo=post_repo))
 
     await asyncio.gather(*twitter_tasks)
-    # all_twitter_data = await asyncio.gather(*twitter_tasks)
-
-    # all_twitter_posts = [twitter_data for twitter_data in all_twitter_data]
-
-    #reddit_posts = reddit_data[0]
-    #reddit_comments = reddit_data[1]
-    #twitter_posts = twitter_data[0]
-    
-    # upload data
-    # manager = DBManager(db_name='scraped_data')
-    # async def insert_documents(session):
-            
-    #     #await manager.insert_documents("redditposts", reddit_posts, session=session)
-    #     #await manager.insert_documents("redditcomments", reddit_comments, session=session)
-    #     for twitter_posts in all_twitter_posts:
-    #         await manager.insert_documents("twitterdata", twitter_posts, session=session)
-    
-    # async with await manager.client.start_session() as session:
-    #     async with session.start_transaction():
-    #         await insert_documents(session=session)
-
 
 asyncio.run(main())
 
