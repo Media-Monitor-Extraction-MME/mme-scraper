@@ -6,10 +6,8 @@ import re
 import asyncio
 import datetime
 import sys, os
-from InterfaceScraper import IScraper
 from General.RepoStructure.IRepos import IPostRepository
 
-from InterfaceScraper import IScraper
 from playwright.async_api import async_playwright
 from bson import ObjectId
 
