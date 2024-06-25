@@ -1,21 +1,19 @@
 '''
 Reddit scraper implementation
 '''
-import sys, os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-#Imports
-#from .ForumEntity import Forum
-#from ForumEntity import Forum
-#from PostEntity import Post
-#from CommentEntity import Comment
 
-from playwright.async_api import async_playwright
-from bson import ObjectId
-import hashlib
-from InterfaceScraper import IScraper
 import re
 import asyncio
 import datetime
+import sys, os
+
+from playwright.async_api import async_playwright
+from bson import ObjectId
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from InterfaceScraper import IScraper
+from General.RepoStructure.IRepos import IPostRepository
+
 
 class RedditScraper(IScraper):
     
@@ -28,7 +26,7 @@ class RedditScraper(IScraper):
         self.query = query
 
     #Methods
-    async def subreddit_scrape(self, browser) -> list:
+    async def _subreddit_scrape(self, browser) -> list:
         """
         Scrapes the subreddits related to a query (community search, search query).
 
@@ -83,29 +81,8 @@ class RedditScraper(IScraper):
         await context.close()
         
         return filtered_subreddits
-
-    async def generate_id(self, string: str) -> ObjectId:
-        """
-        Generates a unique ID from a string.
-        
-        Args:
-            @string: The string to generate an ID from.
-        
-        Returns:
-            (str): The generated ID.
-        """
-        # Hash the input string using SHA-1
-        hash_object = hashlib.sha1(string.encode())
-        
-        # Take the first 12 bytes of the hash
-        objectid_hex = hash_object.hexdigest()[:24]
-        
-        # Create an ObjectId from the hex string
-        object_id = ObjectId(objectid_hex)
-        
-        return object_id
     
-    async def post_scrape(self, forums, browser) -> dict:
+    async def _post_scrape(self, forums, browser) -> dict:
         """
         Scrapes the posts in a subreddit.
         
@@ -129,13 +106,10 @@ class RedditScraper(IScraper):
                 A dictionary containing the mapped post data.
             """
             mapping = {
-                'data-fullname': '_id',
+                'data-fullname': 'postID',
                 'data-timestamp': 'time',
                 'data-permalink': 'url',
-                'data-score': 'upvotes',
-                'data-fullname': '_id',
-                'data-timestamp': 'time',
-                'data-permalink': 'url'
+                'data-score': 'upvotes'
                 }
             
             ## check if ad and skips if true
@@ -148,13 +122,10 @@ class RedditScraper(IScraper):
                 if attr['name'] in mapping:
                     post[mapping[attr['name']]] = attr['value']
             
-            if post['timestamp']:
-                timestamp_seconds = int(post['timestamp']) / 1000
+            if post['time']:
+                timestamp_seconds = int(post['time']) / 1000
                 dt = datetime.datetime.fromtimestamp(timestamp_seconds)
-                post['timestamp'] = dt
-                
-            if post['_id']:
-                post['_id'] = await self.generate_id(post['_id'])
+                post['time'] = dt
             
             return post
         
@@ -171,16 +142,10 @@ class RedditScraper(IScraper):
                 A dictionary containing the post data. 
             """
             post = {
-                '_id':None,
-                'url': None,
-                '_id':None,
+                'postID':None,
                 'url': None,
                 'title': '',
                 'description': '',
-                'time': None,
-                'upvotes': None,
-                'views': None,
-                'reposts': None,
                 'time': None,
                 'upvotes': None
             }
@@ -197,6 +162,16 @@ class RedditScraper(IScraper):
         
         #Initialize every subreddit in batches of 3
         async def launch_contexts(browser, forums):
+            """
+            Launches multiple browser contexts to scrape the comments in parallel.
+            
+            Args:
+                @browser: The Playwright browser instance.
+                @posts: The list of post dictionaries.
+                
+            Returns:
+                A list of dictionaries containing the comments of the posts.
+            """
             contexts = await asyncio.gather(*(browser.new_context() for _ in range(5)))
             for i in range(0, len(forums), 3):
                 batch = forums[i:i+3]
@@ -209,6 +184,17 @@ class RedditScraper(IScraper):
             return tasks_results[0]
         
         async def load_pages(page, subreddit):
+            """
+            Loads the Reddit post pages and extracts the comments using a javascript eval.
+            
+            Args:
+                @page: The Playwright page object.
+                @subreddit: The subreddit to scrape.
+                
+            Returns:
+                A list of dictionaries containing the posts of the subreddit.
+            
+            """
             await page.goto(f"https://old.reddit.com/{subreddit}", wait_until='domcontentloaded')
             await page.wait_for_load_state('load')
             elements = await page.query_selector_all('div[data-fullname]')    
@@ -219,7 +205,7 @@ class RedditScraper(IScraper):
         scraped_posts = await launch_contexts(browser, forums)
         return scraped_posts
 
-    async def content_scrape(self, posts, browser) -> dict:
+    async def _content_scrape(self, posts, browser) -> dict:
         """
         Scrapes the content of a Reddit post, specifically the comments.
         
@@ -230,18 +216,18 @@ class RedditScraper(IScraper):
         Returns:
             A dictionary containing the title, upvotes, description, and comments of the Reddit post.
         """
-        comments_data = []
-        async def generate_id(id: str) -> ObjectId:
-            """
-            Generates a unique ID for a comment.
-            
-            Returns:
-                (str): The generated ID.
-            """
-            
-            return ObjectId()
-
         async def process_comments(comments, post_id, level=0):
+            """
+            Helper function for load_pages, processes the comments recursively which handles the comment thread structure.
+            
+            Args:
+                @comments: The comments to process.
+                @post_id: The ID of the post.
+                @level: The level of the comment in the thread.
+                
+            Returns:
+                A list of dictionaries containing the processed comments.
+            """
             # Recursively process comments and generate unique IDs for each comment
             processed_comments = []
             
@@ -264,8 +250,18 @@ class RedditScraper(IScraper):
             return processed_comments
         
         async def load_pages(page, post):
-            await page.goto(f"https://old.reddit.com/{post['perma_link']}", wait_until='domcontentloaded')
-            #get description
+            """
+            Loads the Reddit post pages and extracts the comments using a javascript eval.
+            
+            Args:
+                @page: The Playwright page object.
+                @post: The post dictionary.
+                
+            Returns:
+                A list of dictionaries containing the comments of the post.
+            
+            """
+            await page.goto(f"https://old.reddit.com/{post['url']}", wait_until='domcontentloaded')
             #get description
             await page.wait_for_load_state('load')
             comment_data = await page.evaluate("""
@@ -325,14 +321,24 @@ class RedditScraper(IScraper):
                     })()
                     """)
             
-            description = await page.query_selector('.usertext.usertext-body')
-            posts['description'] = await description.inner_text() if description else None
-            comments_data = await process_comments(comment_data, post['_id'])
+            description = await (await page.query_selector('.usertext.usertext-body')).inner_text()
+            post['description'] = description
+            comments_data = await process_comments(comment_data, post['postID'])
             #comments = [comment for sublist in comments_data for comment in sublist if comment is not None]
 
             return comments_data  
             
         async def launch_contexts(browser, posts):
+            """
+            Launches multiple browser contexts to scrape the comments in parallel.
+            
+            Args:
+                @browser: The Playwright browser instance.
+                @posts: The list of post dictionaries.
+                
+            Returns:
+                A list of dictionaries containing the comments of the posts.
+            """
             content_scraper_tasks = []
             contexts = await asyncio.gather(*(browser.new_context() for _ in range(5)))
             for i, post in enumerate(posts):
@@ -350,15 +356,29 @@ class RedditScraper(IScraper):
                 
         return comments
       
-    async def scrape(self, keyword):
+    async def scrape(self, post_repo: IPostRepository, keyword):
+        """
+        Scrapes Reddit for posts and comments related to a keyword.
+        
+        Args:
+            @keyword: The keyword to search for.
+        
+        Returns:
+            A list of dictionaries containing the scraped post and comment data.
+        """
         async with async_playwright() as p:
             browser = await p.chromium.launch(args=['--start-maximized'], headless=False)
 
             self.query = keyword
             
-            subreddits = await self.subreddit_scrape(browser=browser)
-            posts = await self.post_scrape(forums=subreddits, browser=browser)
+            subreddits = await self._subreddit_scrape(browser=browser)
+            posts = await self._post_scrape(forums=subreddits, browser=browser)
             if posts:
-                comments = await self.content_scrape(posts=posts, browser=browser)
+                comments = await self._content_scrape(posts=posts, browser=browser)
+            post_results = await asyncio.gather(*[post_repo.add_post(post) for post in posts])
+            comment_results = await asyncio.gather(*[post_repo.add_comment(comment) for comment in comments])
+
+            print(f'Reddit: {len(post_results)} posts scraped.')
+            print(f'Reddit: {len(comment_results)} comments scraped.')
             
-            return posts, comments
+            return post_results, comment_results
