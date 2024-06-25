@@ -6,12 +6,14 @@ import re
 import asyncio
 import datetime
 import sys, os
-from General.RepoStructure.IRepos import IPostRepository
 
 from playwright.async_api import async_playwright
 from bson import ObjectId
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from InterfaceScraper import IScraper
+from General.RepoStructure.IRepos import IPostRepository
+
 
 class RedditScraper(IScraper):
     
