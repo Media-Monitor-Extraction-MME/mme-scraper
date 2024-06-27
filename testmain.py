@@ -86,6 +86,7 @@ async def run_twitter(twitterscraper):
 async def main():
     # logging.info('Search tasks?')
     manager = DBManager(db_name='scraped_data')
+    post_repo = PostRepo(db=manager, collection="posts")
     task_repo = TaskRepo(db=manager, collection="tasks")
     tasks = await task_repo.get_tasks(filter={})
     # logging.info(tasks)
@@ -95,6 +96,10 @@ async def main():
     logging.info(keywords)
     username = None
     password = None
+
+    # for query in keywords:
+    #     redditscraper = RedditScraper(query=query)
+    #     await redditscraper.scrape(post_repo=post_repo, keyword=query)
 
     try:
         with open('Scrapers/Twitter/account_data/accounts.txt', 'r') as file:
@@ -108,15 +113,14 @@ async def main():
 
     # init scrapers
     twitterscraper = TwitterScraper(link_gather_account_username=username, link_gather_account_password=password, keywords=keywords)
-    redditscraper = RedditScraper(query=keywords)
 
     logging.info("start scraping...")
     #Twitter testing for multiple keywords:
-    post_repo = PostRepo(db=manager, collection="posts")
     twitter_tasks = []
     # for keyword in keywords:
     logging.info(f"Keywords: {keywords}")
     twitterscraper = TwitterScraper(username, password, keywords)
+
 
     def get_month_ranges(start_year):
         current_date = datetime.now()
@@ -145,9 +149,17 @@ async def main():
         for start_date, end_date in month_ranges:
             filter_string = f"min_faves:500 until:{end_date.strftime('%Y-%m-%d')} since:{start_date.strftime('%Y-%m-%d')}"
             await twitterscraper.scrape(page=page, post_repo=post_repo, filter=filter_string)
-            await asyncio.sleep(300) #Wait for 5min to not overload twitter
+            for remaining in range(300, 0, -1):
+                print(f"Remaining time: {remaining} seconds")
+                await asyncio.sleep(1) #Wait for 5min to not overload twitter
+
         # await asyncio.gather(*twitter_tasks)
         await twitterscraper._logout(page=page)
+
+    # for query in keywords:
+    #     redditscraper = RedditScraper(query=query)
+    #     await redditscraper.scrape(post_repo=post_repo, keyword=query)
+
 
 
 

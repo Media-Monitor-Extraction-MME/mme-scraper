@@ -155,7 +155,9 @@ class RedditScraper(IScraper):
                 post.update(mapped_post)
                 data_fullname = next(attr['value'] for attr in attributes if attr['name'] == 'data-fullname')
                 post['title'] = await (await page.query_selector(f"div[data-fullname='{data_fullname}'] > div.entry.unvoted > div.top-matter > p.title > a" )).inner_text()
-                post['description'] = await (await page.query_selector(f"#form-{data_fullname} > div.usertext-body")).inner_text()
+                # description_body = (await page.query_selector(f"#form-{data_fullname} > div.usertext-body"))
+                # if description_body is not None:
+                #     post['description'] = await description_body.inner_text()
                 return post
             else:
                 return None
@@ -342,6 +344,8 @@ class RedditScraper(IScraper):
             content_scraper_tasks = []
             contexts = await asyncio.gather(*(browser.new_context() for _ in range(5)))
             for i, post in enumerate(posts):
+                if post is None:
+                    continue
                 context = contexts[i % len(contexts)]
                 page = await context.new_page()
                 timeout = 60000
