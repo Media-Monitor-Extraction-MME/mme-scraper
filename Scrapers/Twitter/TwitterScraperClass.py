@@ -18,6 +18,7 @@ from bson import ObjectId
 import logging
 import requests
 import aiohttp
+from datetime import datetime, timedelta
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -41,7 +42,7 @@ class TwitterScraper(IScraper):
 		self.keywords = keywords
 
 
-	async def _login_account(self, browser):
+	async def _login_account(self, browser=None):
 		'''
 		A method to login to twitter based on the account passed in the constructor
 
@@ -107,7 +108,7 @@ class TwitterScraper(IScraper):
 		await page.close()
 		logger.debug("Page closed")
   
-	async def _link_gatherer(self, page, keyword: string, filter: string = "min_faves:500 since:2024-01-01"):
+	async def _link_gatherer(self, page, keyword: string, start_year: int = datetime.now().year, filter: string = 'min_faves:500 since:2024-01-01'):
 		'''
 		A method used to gather links from the Twitter page based on a specified keyword
 
@@ -123,7 +124,31 @@ class TwitterScraper(IScraper):
 
 		links = []
 
+		# def get_month_ranges(start_year):
+		# 	current_date = datetime.now()
+		# 	month_ranges = []
+		# 	year = start_year
+		# 	month = 1
+		# 	while datetime(year, month, 1) <= current_date:
+		# 		start_date = datetime(year, month, 1)
+		# 		end_date = (start_date + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+		# 		if end_date > current_date:
+		# 			end_date == current_date
+		# 		month_ranges.append((start_date, end_date))
+		# 		if month == 12:
+		# 			year += 1
+		# 			month = 1
+		# 		else:
+		# 			month += 1
+		# 	return month_ranges
+	
+		# month_ranges = get_month_ranges(start_year)
+		# print(month_ranges)
+
 		search_selector_id = '[data-testid="SearchBox_Search_Input"]'
+
+		# for start_date, end_date in month_ranges:
+		# filter_string = f"min_faves:500 until:{end_date.strftime('%Y-%m-%d')} since:{start_date.strftime('%Y-%m-%d')}"
 		search_query = f"{keyword} {filter}"
 		await page.locator(search_selector_id).press("Control+A")
 		await page.type(search_selector_id, search_query, delay=150)
@@ -147,7 +172,7 @@ class TwitterScraper(IScraper):
 		# By scrolling while gathering links we ensure we end up with >7 links.
 		#####################################################################################################
 		
-  	# Needed to execute beforehand because won't collect links if page to small.
+		# Needed to execute beforehand because won't collect links if page to small.
 		await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
 		await page.wait_for_timeout(1000)
 
@@ -159,7 +184,7 @@ class TwitterScraper(IScraper):
 
 		
 		logger.debug("Links collected so far: %s", links)
-  
+
 		await asyncio.sleep(5)
 
 		_prev_height = -1
@@ -394,7 +419,7 @@ class TwitterScraper(IScraper):
 		return tweets
 
 
-	async def scrape(self, post_repo: IPostRepository, filter: string = None):
+	async def scrape(self, page, post_repo: IPostRepository, filter: string = None):
 		'''
 		This function combines all of the previous declared functions, allowing the frontend to call this function and get the expected result
 
@@ -413,9 +438,9 @@ class TwitterScraper(IScraper):
 			browser = await p.firefox.launch(args=['--start-maximized'], headless=False)
 
 			
-			page = await self._login_account(browser=browser)
-			if page is None:
-				logging.error("Page is none")
+			# page = await self._login_account(browser=browser)
+			# if page is None:
+			# 	logging.error("Page is none")
 
 			links = []
 			for keyword in self.keywords:
@@ -424,7 +449,7 @@ class TwitterScraper(IScraper):
 						links.extend(await self._link_gatherer(page=page, keyword=keyword, filter=filter))
 				else:
 						links.extend(await self._link_gatherer(page=page, keyword=keyword))
-			await self._logout(page=page)
+			# await self._logout(page=page)
 			logging.info(links)
 			#twitterdata = await self.scraper(browser=browser, links=links)
 			end_time_links = time.time()
